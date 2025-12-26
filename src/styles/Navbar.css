@@ -1,0 +1,157 @@
+/* Navbar Styles */
+.navbar {
+  background: linear-gradient(to right, #ffffff, #f8f9fa);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 70px;
+  border-bottom: 2px solid var(--secondary-color);
+}
+
+.navbar-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-xl);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+}
+
+.navbar-logo {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.navbar-logo:hover {
+  color: var(--secondary-color);
+  transform: scale(1.05);
+}
+
+.logo-icon {
+  font-size: 2rem;
+  filter: drop-shadow(2px 2px 4px rgba(230, 126, 34, 0.3));
+}
+
+.navbar-menu {
+  display: flex;
+  list-style: none;
+  gap: var(--spacing-md);
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  flex-wrap: nowrap;
+}
+
+.navbar-item {
+  position: relative;
+}
+
+.navbar-link {
+  padding: 10px 20px;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 15px;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  display: block;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.navbar-link:hover {
+  background-color: var(--light-bg);
+  color: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Craftsman Dashboard Link */
+.navbar-link-primary {
+  background: linear-gradient(135deg, var(--secondary-color), #d35400);
+  color: var(--white);
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(230, 126, 34, 0.4);
+  padding: 10px 24px;
+  border: 2px solid transparent;
+}
+
+.navbar-link-primary:hover {
+  background: linear-gradient(135deg, #d35400, var(--secondary-color));
+  color: var(--white);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(230, 126, 34, 0.5);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Craftsman Name Link */
+.navbar-link.craftsman-name {
+  background-color: var(--primary-color);
+  color: var(--white);
+  font-weight: 600;
+  padding: 10px 24px;
+  border: 2px solid var(--primary-color);
+}
+
+.navbar-link.craftsman-name:hover {
+  background-color: #1a252f;
+  color: var(--white);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(44, 62, 80, 0.4);
+  border-color: var(--secondary-color);
+}
+
+/* Logout Button */
+.navbar-btn {
+  background-color: transparent;
+  border: 2px solid var(--danger-color);
+  color: var(--danger-color);
+  font-family: var(--font-family);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+
+.navbar-btn:hover {
+  background-color: var(--danger-color);
+  color: var(--white);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+.navbar-mobile-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.navbar-mobile-toggle span {
+  width: 25px;
+  height: 3px;
+  background-color: var(--primary-color);
+  border-radius: 2px;
+  transition: var(--transition);
+}
+
+@media (max-width: 992px) {
+  .navbar-menu {
+    display: none;
+  }
+  
+  .navbar-mobile-toggle {
+    display: flex;
+  }
+}
