@@ -1,51 +1,21 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import '../styles/Navbar.css';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState(null);
-
-  // Check if user is logged in
-  useEffect(() => {
-    const checkUser = () => {
-      // Check for craftsman login first
-      const craftsman = JSON.parse(localStorage.getItem('craftopia_craftsman') || 'null');
-      if (craftsman) {
-        setCurrentUser(craftsman);
-        return;
-      }
-      
-      // Then check for regular user login
-      const user = JSON.parse(localStorage.getItem('craftopia_current_user') || 'null');
-      setCurrentUser(user);
-    };
-    
-    // Check on mount
-    checkUser();
-    
-    // Listen for storage changes (login/logout from other tabs)
-    window.addEventListener('storage', checkUser);
-    
-    // Custom event for same-tab login/logout
-    window.addEventListener('userChanged', checkUser);
-    
-    return () => {
-      window.removeEventListener('storage', checkUser);
-      window.removeEventListener('userChanged', checkUser);
-    };
-  }, []);
+  const { isLoggedIn, user, profile, role, logout } = useAuth();
 
   // Handle logout
   const handleLogout = () => {
-    // Remove both types of sessions
-    localStorage.removeItem('craftopia_current_user');
-    localStorage.removeItem('craftopia_craftsman');
-    setCurrentUser(null);
-    window.dispatchEvent(new Event('userChanged'));
+    console.log('🚪 Logging out from Navbar');
+    logout();
     navigate('/');
-    alert('You have been logged out successfully!');
   };
+
+  // Get display name - prefer profile data if available
+  const displayName = profile?.name || user?.name || 'Profile';
+  const displayEmail = profile?.email || user?.email;
 
   return (
     <nav className="navbar">
@@ -60,18 +30,17 @@ const Navbar = () => {
             <Link to="/" className="navbar-link">Home</Link>
           </li>
           
-          {/* Show different menus based on user type */}
-          {currentUser?.type === 'craftsman' ? (
-            // Craftsman Menu
+          {isLoggedIn && role === 'artisan' ? (
+            // Artisan Menu (logged in)
             <>
               <li className="navbar-item">
                 <Link to="/craftsman-dashboard" className="navbar-link navbar-link-primary">
-                  🏪 My Dashboard
+                  🏪 Dashboard
                 </Link>
               </li>
               <li className="navbar-item">
-                <Link to="/profile" className="navbar-link craftsman-name">
-                  👤 {currentUser.name}
+                <Link to="/profile" className="navbar-link" title={displayEmail}>
+                  👤 {displayName}
                 </Link>
               </li>
               <li className="navbar-item">
@@ -80,14 +49,11 @@ const Navbar = () => {
                 </button>
               </li>
             </>
-          ) : currentUser ? (
+          ) : isLoggedIn && role === 'customer' ? (
             // Customer Menu (logged in)
             <>
               <li className="navbar-item">
                 <Link to="/crafts" className="navbar-link">Browse Crafts</Link>
-              </li>
-              <li className="navbar-item">
-                <Link to="/book-maintenance" className="navbar-link">Book Maintenance</Link>
               </li>
               <li className="navbar-item">
                 <Link to="/reservations" className="navbar-link navbar-link-primary">
@@ -95,13 +61,13 @@ const Navbar = () => {
                 </Link>
               </li>
               <li className="navbar-item">
-                <Link to="/profile" className="navbar-link">
-                  {currentUser.name}
+                <Link to="/profile" className="navbar-link" title={displayEmail}>
+                  👤 {displayName}
                 </Link>
               </li>
               <li className="navbar-item">
                 <button onClick={handleLogout} className="navbar-link navbar-btn">
-                  Logout
+                  🚪 Logout
                 </button>
               </li>
             </>
@@ -112,15 +78,12 @@ const Navbar = () => {
                 <Link to="/crafts" className="navbar-link">Browse Crafts</Link>
               </li>
               <li className="navbar-item">
-                <Link to="/book-maintenance" className="navbar-link">Book Maintenance</Link>
-              </li>
-              <li className="navbar-item">
                 <Link to="/login" className="navbar-link navbar-link-secondary">
-                  Login
+                  Sign In
                 </Link>
               </li>
               <li className="navbar-item">
-                <Link to="/signup" className="navbar-link navbar-link-primary">
+                <Link to="/role-selection" className="navbar-link navbar-link-primary">
                   Sign Up
                 </Link>
               </li>

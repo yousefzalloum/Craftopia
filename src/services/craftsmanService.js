@@ -11,29 +11,20 @@ import { post, get, put, parseApiError } from '../utils/api';
  * @param {string} craftsmanData.name - Craftsman's full name
  * @param {string} craftsmanData.email - Email address
  * @param {string} craftsmanData.password - Password
+ * @param {string} craftsmanData.phone_number - Phone number
  * @param {string} craftsmanData.craftType - Type of craft/profession
  * @param {string} craftsmanData.location - City/location
  * @returns {Promise<Object>} Response with craftsman data and token
  */
 export const registerCraftsman = async (craftsmanData) => {
   try {
-    const response = await post('/artisans', craftsmanData);
+    const response = await post('/artisans/signup', craftsmanData);
     
     // Store token in localStorage if provided
     if (response.token) {
-      localStorage.setItem('craftopia_token', response.token);
-      localStorage.setItem('craftopia_craftsman_id', response._id);
-      
-      // Store craftsman info (without sensitive data)
-      const craftsmanInfo = {
-        id: response._id,
-        name: response.name,
-        email: response.email,
-        craftType: response.craftType,
-        location: response.location,
-        type: 'craftsman'
-      };
-      localStorage.setItem('craftopia_current_user', JSON.stringify(craftsmanInfo));
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('role', response.role || 'artisan');
+      localStorage.setItem('userId', response._id);
     }
     
     return response;
@@ -51,26 +42,84 @@ export const registerCraftsman = async (craftsmanData) => {
  */
 export const loginCraftsman = async (credentials) => {
   try {
-    const response = await post('/artisans/login', credentials);
+    // Prepare request payload with trimmed email
+    const loginPayload = {
+      email: credentials.email.trim(),
+      password: credentials.password
+    };
     
-    // Store token and user info
+    // Calculate final URL
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const finalUrl = `${baseUrl}/artisans/login`;
+    
+    // Log request details
+    console.log('🔐 Artisan Login Request Payload:', {
+      email: loginPayload.email,
+      emailLength: loginPayload.email.length,
+      passwordLength: loginPayload.password.length
+    });
+    console.log('🔗 Final Request URL:', finalUrl);
+    
+    const response = await post('/artisans/login', loginPayload);
+    
+    // Log success response
+    console.log('✅ Artisan Login Success - Response Status: 200');
+    console.log('✅ Artisan Login Response Data:', {
+      _id: response._id,
+      name: response.name,
+      role: response.role,
+      token: response.token ? '✓ Token received' : '✗ No token'
+    });
+    
+    // Store token, role, and userId in localStorage (same keys as customer)
     if (response.token) {
-      localStorage.setItem('craftopia_token', response.token);
-      localStorage.setItem('craftopia_craftsman_id', response._id);
-      
-      const craftsmanInfo = {
-        id: response._id,
-        name: response.name,
-        email: response.email,
-        craftType: response.craftType,
-        location: response.location,
-        type: 'craftsman'
-      };
-      localStorage.setItem('craftopia_current_user', JSON.stringify(craftsmanInfo));
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('role', response.role);
+      localStorage.setItem('userId', response._id);
+      console.log('💾 Stored in localStorage - token, role, userId');
     }
     
     return response;
   } catch (error) {
+    // Log detailed error information
+    console.error('❌ Artisan Login Failed');
+    console.error('❌ Error Status:', error.status || 'Unknown');
+    console.error('❌ Error Message:', error.message);
+    console.error('❌ Error Response Data:', error.data);
+    
+    // Create error object that preserves status code for Login.jsx fallback logic
+    const err = new Error(parseApiError(error));
+    err.status = error.status;
+    throw err;
+  }
+};
+
+/**
+ * Get artisan profile (authenticated endpoint)
+ * Requires valid JWT token in Authorization header
+ * @returns {Promise<Object>} Artisan profile data
+ */
+export const getArtisanProfile = async () => {
+  try {
+    console.log('📋 Fetching artisan profile...');
+    
+    // Token is automatically included by the get() helper from localStorage
+    const response = await get('/artisans/profile');
+    
+    console.log('✅ Artisan profile fetched successfully:', {
+      _id: response._id,
+      name: response.name,
+      email: response.email,
+      role: response.role
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to fetch artisan profile');
+    console.error('❌ Error Status:', error.status || 'Unknown');
+    console.error('❌ Error Message:', error.message);
+    console.error('❌ Error Response Data:', error.data);
+    
     throw new Error(parseApiError(error));
   }
 };
@@ -85,6 +134,10 @@ export const getCraftsmanProfile = async (craftsmanId) => {
     const response = await get(`/artisans/${craftsmanId}`);
     return response;
   } catch (error) {
+    // Preserve the original error with status if it's an ApiError
+    if (error.status) {
+      throw error;
+    }
     throw new Error(parseApiError(error));
   }
 };
@@ -131,7 +184,7 @@ export const getAllCraftsmen = async (filters = {}) => {
  * Clears local storage and authentication data
  */
 export const logoutCraftsman = () => {
-  localStorage.removeItem('craftopia_token');
-  localStorage.removeItem('craftopia_craftsman_id');
-  localStorage.removeItem('craftopia_current_user');
+  localStorage.removeItem('token');
+  localStorage.removeItem('role');
+  localStorage.removeItem('userId');
 };

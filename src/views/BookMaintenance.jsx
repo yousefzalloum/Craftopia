@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { CraftController } from '../controllers/CraftController';
 import { CraftsmanController } from '../controllers/CraftsmanController';
 import { ReservationController } from '../controllers/ReservationController';
-import { getCurrentUser } from '../utils/auth';
 import '../styles/BookMaintenance.css';
 
 const BookMaintenance = () => {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
+  const { isLoggedIn, user, userId } = useAuth();
   const crafts = CraftController.getCrafts();
   const craftsmen = CraftsmanController.getCraftsmen();
 
   // Check authentication on component mount
   useEffect(() => {
-    if (!currentUser) {
+    if (!isLoggedIn) {
       alert('Please login or sign up to book a maintenance service');
       navigate('/login');
     }
-  }, [currentUser, navigate]);
+  }, [isLoggedIn, navigate]);
 
   const [formData, setFormData] = useState({
     category: '',
@@ -61,7 +61,7 @@ const BookMaintenance = () => {
     e.preventDefault();
     setMessage('');
 
-    if (!currentUser) {
+    if (!isLoggedIn || !user) {
       setMessage('Please login first to book a service');
       setTimeout(() => navigate('/login'), 2000);
       return;
@@ -76,9 +76,9 @@ const BookMaintenance = () => {
     // Create maintenance appointment
     const result = ReservationController.createReservation(
       parseInt(formData.craftsmanId),
-      currentUser.id,
-      currentUser.name,
-      currentUser.email,
+      userId || user._id || user.id,
+      user.name,
+      user.email,
       formData.appointmentDate,
       formData.appointmentDate,
       'maintenance',
@@ -98,7 +98,7 @@ const BookMaintenance = () => {
   };
 
   // Don't render the page if user is not logged in
-  if (!currentUser) {
+  if (!isLoggedIn) {
     return null;
   }
 

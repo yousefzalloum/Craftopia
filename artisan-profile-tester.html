@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artisan Profile API Tester</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: #7f8c8d;
+      margin-bottom: 2rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: #f8f9fa;
+      border-radius: 12px;
+      border-left: 4px solid #667eea;
+    }
+
+    .section h2 {
+      color: #2c3e50;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+
+    .input-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      color: #555;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    button {
+      padding: 0.75rem 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-right: 1rem;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: #95a5a6;
+    }
+
+    .btn-danger {
+      background: #e74c3c;
+    }
+
+    pre {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .status {
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border-left: 4px solid #28a745;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border-left: 4px solid #dc3545;
+    }
+
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border-left: 4px solid #17a2b8;
+    }
+
+    .token-display {
+      word-break: break-all;
+      font-family: monospace;
+      background: #e9ecef;
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+    }
+
+    .profile-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-top: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .profile-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .profile-row:last-child {
+      border-bottom: none;
+    }
+
+    .profile-label {
+      font-weight: 600;
+      color: #555;
+    }
+
+    .profile-value {
+      color: #2c3e50;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Artisan Profile API Tester</h1>
+    <p class="subtitle">Test your artisan profile API integration</p>
+
+    <!-- API Configuration -->
+    <div class="section">
+      <h2>⚙️ API Configuration</h2>
+      <div class="input-group">
+        <label>Base URL</label>
+        <input type="text" id="baseUrl" value="http://localhost:5000/api" placeholder="http://localhost:5000/api">
+      </div>
+    </div>
+
+    <!-- Login Section -->
+    <div class="section">
+      <h2>🔐 Step 1: Login as Artisan</h2>
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="email" value="emem@example.com" placeholder="artisan@example.com">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="password" value="" placeholder="Your password">
+      </div>
+      <button onclick="login()">🔑 Login</button>
+      <button class="btn-secondary" onclick="useLocalStorageToken()">📦 Use LocalStorage Token</button>
+      <div id="loginStatus"></div>
+    </div>
+
+    <!-- Token Display -->
+    <div class="section">
+      <h2>🎫 Step 2: Token Status</h2>
+      <div id="tokenStatus">
+        <p class="status info">No token yet. Please login first.</p>
+      </div>
+    </div>
+
+    <!-- Fetch Profile -->
+    <div class="section">
+      <h2>👤 Step 3: Fetch Profile</h2>
+      <button onclick="fetchProfile()">📋 Get Profile</button>
+      <button class="btn-secondary" onclick="testAuthHeader()">🔍 Test Auth Header</button>
+      <button class="btn-danger" onclick="clearData()">🗑️ Clear All</button>
+      <div id="profileStatus"></div>
+    </div>
+
+    <!-- Profile Display -->
+    <div id="profileDisplay"></div>
+  </div>
+
+  <script>
+    let currentToken = null;
+
+    // Login function
+    async function login() {
+      const baseUrl = document.getElementById('baseUrl').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const statusDiv = document.getElementById('loginStatus');
+
+      statusDiv.innerHTML = '<p class="status info">⏳ Logging in...</p>';
+
+      try {
+        const response = await fetch(`${baseUrl}/artisans/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+
+        currentToken = data.token;
+        
+        // Store in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role || 'artisan');
+        localStorage.setItem('userId', data._id);
+
+        statusDiv.innerHTML = `
+          <div class="status success">
+            ✅ Login successful!<br>
+            <strong>Name:</strong> ${data.name}<br>
+            <strong>Email:</strong> ${data.email}
+          </div>
+        `;
+
+        updateTokenDisplay();
+      } catch (error) {
+        statusDiv.innerHTML = `<div class="status error">❌ ${error.message}</div>`;
+      }
+    }
+
+    // Use token from localStorage
+    function useLocalStorageToken() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        currentToken = token;
+        updateTokenDisplay();
+        document.getElementById('loginStatus').innerHTML = 
+          '<div class="status success">✅ Token loaded from localStorage</div>';
+      } else {
+        document.getElementById('loginStatus').innerHTML = 
+          '<div class="status error">❌ No token found in localStorage</div>';
+      }
+    }
+
+    // Update token display
+    function updateTokenDisplay() {
+      const tokenDiv = document.getElementById('tokenStatus');
+      if (currentToken) {
+        tokenDiv.innerHTML = `
+          <div class="status success">
+            ✅ Token Available<br>
+            <div class="token-display">${currentToken.substring(0, 50)}...</div>
+          </div>
+        `;
+      } else {
+        tokenDiv.innerHTML = '<p class="status info">No token yet. Please login first.</p>';
+      }
+    }
+
+    // Test auth header
+    function testAuthHeader() {
+      const statusDiv = document.getElementById('profileStatus');
+      if (!currentToken) {
+        statusDiv.innerHTML = '<div class="status error">❌ No token available. Please login first.</div>';
+        return;
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${currentToken}`,
+        'Content-Type': 'application/json'
+      };
+
+      statusDiv.innerHTML = `
+        <div class="status info">
+          📝 Authorization Header:<br>
+          <pre>${JSON.stringify(headers, null, 2)}</pre>
+        </div>
+      `;
+    }
+
+    // Fetch profile
+    async function fetchProfile() {
+      const baseUrl = document.getElementById('baseUrl').value;
+      const statusDiv = document.getElementById('profileStatus');
+      const displayDiv = document.getElementById('profileDisplay');
+
+      if (!currentToken) {
+        statusDiv.innerHTML = '<div class="status error">❌ No token available. Please login first.</div>';
+        return;
+      }
+
+      statusDiv.innerHTML = '<p class="status info">⏳ Fetching profile...</p>';
+      displayDiv.innerHTML = '';
+
+      try {
+        const response = await fetch(`${baseUrl}/artisans/profile`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${currentToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to fetch profile');
+        }
+
+        statusDiv.innerHTML = '<div class="status success">✅ Profile fetched successfully!</div>';
+        
+        displayDiv.innerHTML = `
+          <div class="section">
+            <h2>📊 Profile Data</h2>
+            <div class="profile-card">
+              <div class="profile-row">
+                <span class="profile-label">ID:</span>
+                <span class="profile-value">${data._id}</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Name:</span>
+                <span class="profile-value">${data.name}</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Email:</span>
+                <span class="profile-value">${data.email}</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Phone:</span>
+                <span class="profile-value">${data.phone_number || 'N/A'}</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Craft Type:</span>
+                <span class="profile-value">${data.craftType}</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Location:</span>
+                <span class="profile-value">${data.location}</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Description:</span>
+                <span class="profile-value">${data.description || 'N/A'}</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Portfolio Images:</span>
+                <span class="profile-value">${data.portfolioImages?.length || 0} images</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Average Rating:</span>
+                <span class="profile-value">⭐ ${data.averageRating.toFixed(1)}</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Created At:</span>
+                <span class="profile-value">${new Date(data.createdAt).toLocaleString()}</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Updated At:</span>
+                <span class="profile-value">${new Date(data.updatedAt).toLocaleString()}</span>
+              </div>
+            </div>
+            <h3 style="margin-top: 1.5rem; color: #2c3e50;">Raw JSON Response</h3>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          </div>
+        `;
+      } catch (error) {
+        statusDiv.innerHTML = `<div class="status error">❌ ${error.message}</div>`;
+        displayDiv.innerHTML = '';
+      }
+    }
+
+    // Clear all data
+    function clearData() {
+      currentToken = null;
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('userId');
+      
+      document.getElementById('loginStatus').innerHTML = '';
+      document.getElementById('profileStatus').innerHTML = '';
+      document.getElementById('profileDisplay').innerHTML = '';
+      updateTokenDisplay();
+      
+      alert('✅ All data cleared!');
+    }
+
+    // Check for existing token on page load
+    window.onload = function() {
+      useLocalStorageToken();
+    };
+  </script>
+</body>
+</html>

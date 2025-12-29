@@ -1,10 +1,16 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { registerCraftsman } from '../services/craftsmanService';
+import { registerCustomer } from '../services/customerService';
 import '../styles/Signup.css';
 
 const Signup = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const roleFromUrl = searchParams.get('role');
+  
+  // Determine role - default to artisan if not specified
+  const [role, setRole] = useState(roleFromUrl || 'artisan');
   
   // Form state management - matching backend fields exactly
   const [formData, setFormData] = useState({
@@ -12,7 +18,9 @@ const Signup = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    phone_number: '',
     craftType: '',
+    description: '',
     location: ''
   });
   
@@ -95,14 +103,29 @@ const Signup = () => {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    // Craft type validation
-    if (!formData.craftType) {
-      newErrors.craftType = 'Please select your craft type';
+    // Phone number validation
+    if (!formData.phone_number.trim()) {
+      newErrors.phone_number = 'Phone number is required';
     }
 
-    // Location validation
-    if (!formData.location) {
-      newErrors.location = 'Please select your location';
+    // Artisan-specific validations
+    if (role === 'artisan') {
+      // Craft type validation
+      if (!formData.craftType) {
+        newErrors.craftType = 'Please select your craft type';
+      }
+
+      // Description validation
+      if (!formData.description.trim()) {
+        newErrors.description = 'Description is required';
+      } else if (formData.description.trim().length < 10) {
+        newErrors.description = 'Description must be at least 10 characters';
+      }
+
+      // Location validation (only for artisans)
+      if (!formData.location) {
+        newErrors.location = 'Please select your location';
+      }
     }
 
     setErrors(newErrors);
@@ -127,20 +150,35 @@ const Signup = () => {
         name: formData.name.trim(),
         email: formData.email.toLowerCase().trim(),
         password: formData.password,
-        craftType: formData.craftType,
-        location: formData.location
+        phone_number: formData.phone_number.trim()
       };
+
+      // Add artisan-specific fields
+      if (role === 'artisan') {
+        registrationData.craftType = formData.craftType;
+        registrationData.description = formData.description.trim();
+        registrationData.location = formData.location;
+      }
 
       console.log('📝 Sending registration data:', { ...registrationData, password: '***' });
 
-      // Call API service
-      const response = await registerCraftsman(registrationData);
+      // Call appropriate API service based on role
+      let response;
+      if (role === 'artisan') {
+        response = await registerCraftsman(registrationData);
+      } else {
+        response = await registerCustomer(registrationData);
+      }
 
       console.log('✅ Registration successful:', response);
 
       // Success! Show message and redirect
       setTimeout(() => {
-        navigate('/craftsman-dashboard');
+        if (role === 'artisan') {
+          navigate('/craftsman-dashboard');
+        } else {
+          navigate('/');
+        }
       }, 1000);
 
     } catch (error) {
@@ -161,8 +199,8 @@ const Signup = () => {
               <span className="logo-icon">🔨</span>
               <h1>Craftopia</h1>
             </div>
-            <h2>Artisan Registration</h2>
-            <p>Join our community of skilled craftspeople</p>
+            <h2>{role === 'artisan' ? 'Artisan Registration' : 'Customer Registration'}</h2>
+            <p>{role === 'artisan' ? 'Join our community of skilled craftspeople' : 'Sign up to find skilled craftspeople'}</p>
           </div>
 
           {/* Signup Form */}
@@ -213,49 +251,93 @@ const Signup = () => {
               {errors.email && <span className="error-message">{errors.email}</span>}
             </div>
 
-            {/* Craft Type */}
+            {/* Phone Number */}
             <div className="form-group">
-              <label htmlFor="craftType">
-                Craft Type
+              <label htmlFor="phone_number">
+                Phone Number
                 <span className="required">*</span>
               </label>
               <input
-                type="text"
-                id="craftType"
-                name="craftType"
-                value={formData.craftType}
+                type="tel"
+                id="phone_number"
+                name="phone_number"
+                value={formData.phone_number}
                 onChange={handleChange}
-                placeholder="e.g., Tailoring, Carpentry, Welding, Plumbing"
-                className={errors.craftType ? 'error' : ''}
+                placeholder="e.g., 0599123456"
+                className={errors.phone_number ? 'error' : ''}
                 disabled={isSubmitting}
               />
-              {errors.craftType && <span className="error-message">{errors.craftType}</span>}
-              <span className="input-hint">Enter your craft or trade specialty</span>
+              {errors.phone_number && <span className="error-message">{errors.phone_number}</span>}
             </div>
 
-            {/* Location */}
-            <div className="form-group">
-              <label htmlFor="location">
-                Location
-                <span className="required">*</span>
-              </label>
-              <select
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                className={errors.location ? 'error' : ''}
-                disabled={isSubmitting}
-              >
-                <option value="">Select your city</option>
-                {locations.map((city) => (
-                  <option key={city} value={city}>
-                    {city}
-                  </option>
-                ))}
-              </select>
-              {errors.location && <span className="error-message">{errors.location}</span>}
-            </div>
+            {/* Artisan-only fields */}
+            {role === 'artisan' && (
+              <>
+                {/* Craft Type */}
+                <div className="form-group">
+                  <label htmlFor="craftType">
+                    Craft Type
+                    <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="craftType"
+                    name="craftType"
+                    value={formData.craftType}
+                    onChange={handleChange}
+                    placeholder="e.g., Tailoring, Carpentry, Welding, Plumbing"
+                    className={errors.craftType ? 'error' : ''}
+                    disabled={isSubmitting}
+                  />
+                  {errors.craftType && <span className="error-message">{errors.craftType}</span>}
+                  <span className="input-hint">Enter your craft or trade specialty</span>
+                </div>
+
+                {/* Description */}
+                <div className="form-group">
+                  <label htmlFor="description">
+                    Professional Description
+                    <span className="required">*</span>
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    placeholder="Describe your experience and expertise..."
+                    className={errors.description ? 'error' : ''}
+                    disabled={isSubmitting}
+                    rows="4"
+                  />
+                  {errors.description && <span className="error-message">{errors.description}</span>}
+                  <span className="input-hint">Minimum 10 characters</span>
+                </div>
+
+                {/* Location */}
+                <div className="form-group">
+                  <label htmlFor="location">
+                    Location
+                    <span className="required">*</span>
+                  </label>
+                  <select
+                    id="location"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    className={errors.location ? 'error' : ''}
+                    disabled={isSubmitting}
+                  >
+                    <option value="">Select your city</option>
+                    {locations.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.location && <span className="error-message">{errors.location}</span>}
+                </div>
+              </>
+            )}
 
             {/* Password */}
             <div className="form-group">

@@ -1,413 +1,205 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserController } from '../controllers/UserController';
-import { ReservationController } from '../controllers/ReservationController';
-import { CraftsmanController } from '../controllers/CraftsmanController';
+import { useAuth } from '../context/AuthContext';
+import { getCustomerProfile } from '../services/customerService';
+import Loading from '../components/Loading';
 import '../styles/Profile.css';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { isLoggedIn, role } = useAuth();
   const [user, setUser] = useState(null);
-  const [craftsman, setCraftsman] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isEditingBio, setIsEditingBio] = useState(false);
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [bioText, setBioText] = useState('');
-  const [profileImageUrl, setProfileImageUrl] = useState('');
-  const [tempImageUrl, setTempImageUrl] = useState('');
-  const [reservationStats, setReservationStats] = useState({
-    total: 0,
-    pending: 0,
-    confirmed: 0,
-    completed: 0
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Check for craftsman login first, then regular user login
-    const craftsmanSession = localStorage.getItem('craftopia_craftsman');
-    const regularUser = UserController.getCurrentUser();
-    
-    let currentUser = null;
-    let isCraftsman = false;
-
-    if (craftsmanSession) {
-      // User logged in as craftsman
-      const craftsmanData = JSON.parse(craftsmanSession);
-      const craftsmanProfile = CraftsmanController.getCraftsmanByEmail(craftsmanData.email);
-      
-      if (craftsmanProfile) {
-        // Create user object from craftsman data
-        currentUser = {
-          id: craftsmanProfile.id,
-          name: craftsmanProfile.name,
-          email: craftsmanProfile.email,
-          phone: craftsmanProfile.phone,
-          address: craftsmanProfile.city || 'Not specified',
-          profileImage: 'https://via.placeholder.com/150?text=' + craftsmanProfile.name.charAt(0),
-          joinedDate: new Date().toISOString()
-        };
-        isCraftsman = true;
-        setCraftsman(craftsmanProfile);
-        setBioText(craftsmanProfile.bio || '');
-        setProfileImageUrl(currentUser.profileImage);
-      }
-    } else if (regularUser) {
-      // Regular user login
-      currentUser = regularUser;
-      setProfileImageUrl(currentUser.profileImage);
-      
-      // Check if this user is also a craftsman
-      const craftsmanProfile = CraftsmanController.getCraftsmanByEmail(currentUser.email);
-      if (craftsmanProfile) {
-        setCraftsman(craftsmanProfile);
-        setBioText(craftsmanProfile.bio || '');
-      }
-    }
-    
-    if (!currentUser) {
-      alert('Please login to view your profile');
+    // Check authentication
+    if (!isLoggedIn) {
+      console.log('❌ Not logged in');
       navigate('/login');
       return;
     }
 
-    setUser(UserController.formatUserData(currentUser));
-    
-    const userReservations = ReservationController.getUserReservations(currentUser.id);
-    setReservationStats({
-      total: userReservations.length,
-      pending: userReservations.filter(r => r.status === 'pending').length,
-      confirmed: userReservations.filter(r => r.status === 'confirmed').length,
-      completed: userReservations.filter(r => r.status === 'completed').length
-    });
-  }, [navigate]);
-
-  const handleSaveBio = () => {
-    if (craftsman) {
-      CraftsmanController.updateCraftsmanBio(craftsman.id, bioText);
-      setCraftsman({ ...craftsman, bio: bioText });
-      setIsEditingBio(false);
-      alert('Bio updated successfully!');
+    // Only allow customers (or if role is undefined during login transition)
+    if (role && role !== 'customer') {
+      console.log('❌ Not a customer, redirecting to dashboard');
+      navigate('/craftsman-dashboard');
+      return;
     }
-  };
 
-  const handleSaveProfileImage = () => {
-    if (tempImageUrl.trim()) {
-      // Check if logged in as craftsman
-      const craftsmanSession = localStorage.getItem('craftopia_craftsman');
-      
-      if (craftsmanSession) {
-        // Update craftsman's profile image
-        // For now, just update the state (craftsmen don't have profile images in the model)
-        setProfileImageUrl(tempImageUrl);
-        setUser({ ...user, profileImage: tempImageUrl });
-      } else {
-        // Update regular user's profile image
-        UserController.updateProfileImage(user.id, tempImageUrl);
-        setProfileImageUrl(tempImageUrl);
-        setUser({ ...user, profileImage: tempImageUrl });
+    // Fetch customer profile from API
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        console.log('📋 Fetching customer profile...');
+        
+        const data = await getCustomerProfile();
+        console.log('✅ Profile data received:', data);
+        
+        // Format data for display
+        const userData = {
+          id: data._id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone_number || 'Not specified',
+          registerDate: data.register_date,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt
+        };
+        
+        setUser(userData);
+      } catch (err) {
+        console.error('❌ Failed to fetch profile:', err);
+        setError(err.message || 'Failed to load profile');
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsEditingProfile(false);
-      alert('Profile picture updated successfully!');
-    } else {
-      alert('Please enter a valid image URL');
-    }
-  };
+    };
 
-  const handleCancelImageEdit = () => {
-    setTempImageUrl('');
-    setIsEditingProfile(false);
-  };
+    fetchProfile();
+  }, [isLoggedIn, role, navigate]);
+
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  if (error) {
+    return (
+      <div className="profile-page">
+        <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 20px 20px' }}>
+          <h2>Error Loading Profile</h2>
+          <p className="error-message" style={{ color: '#e74c3c', background: '#ffe5e5', padding: '1rem', borderRadius: '8px', marginTop: '1rem' }}>
+            {error}
+          </p>
+          <button 
+            onClick={() => navigate(-1)} 
+            style={{ marginTop: '1rem', padding: '0.75rem 1.5rem', background: '#3498db', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
-    return null;
+    return (
+      <div className="profile-page">
+        <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 20px 20px', textAlign: 'center' }}>
+          <h2>Profile not found</h2>
+          <button 
+            onClick={() => navigate(-1)} 
+            style={{ marginTop: '1rem', padding: '0.75rem 1.5rem', background: '#3498db', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
   }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
     <div className="profile-page">
-      <div className="container">
-        <div className="profile-header">
-          <div className="profile-header-content">
-            <div className="profile-avatar-container">
-              <img 
-                src={profileImageUrl} 
-                alt={user.name} 
-                className="profile-avatar"
-              />
-              <button 
-                className="btn-edit-avatar"
-                onClick={() => {
-                  setTempImageUrl(profileImageUrl);
-                  setIsEditingProfile(true);
-                }}
-                title="Change profile picture"
-              >
-                📷
-              </button>
+      <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 20px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2rem' }}>
+          <button 
+            onClick={() => navigate(-1)} 
+            style={{ padding: '0.5rem 1rem', background: 'white', border: '2px solid #ddd', borderRadius: '8px', cursor: 'pointer', marginRight: '1rem' }}
+          >
+            ← Back
+          </button>
+          <h1 style={{ margin: 0 }}>My Profile</h1>
+        </div>
+        
+        {/* Profile Header */}
+        <div style={{
+          background: 'white',
+          padding: '2rem',
+          borderRadius: '16px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          marginBottom: '1.5rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+            <div style={{
+              width: '100px',
+              height: '100px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '2.5rem',
+              fontWeight: 'bold'
+            }}>
+              {user.name.charAt(0).toUpperCase()}
             </div>
-            <div className="profile-header-info">
-              <h1 className="profile-name">{user.name}</h1>
-              {craftsman && (
-                <p className="profile-profession">{craftsman.profession} • {craftsman.experienceYears} years experience</p>
-              )}
-              <p className="profile-member-since">Member since {user.joinedDateFormatted}</p>
+            <div>
+              <h2 style={{ margin: '0 0 0.5rem 0', color: '#2c3e50' }}>{user.name}</h2>
+              <p style={{ margin: 0, color: '#7f8c8d' }}>Customer Account</p>
             </div>
           </div>
-          {craftsman && (
-            <div className="profile-badge">
-              <span className="badge-craftsman">✨ Craftsman</span>
-              <span className="badge-rating">⭐ {craftsman.rating}</span>
-            </div>
-          )}
         </div>
 
-        {/* Tabs Navigation */}
-        <div className="profile-tabs">
-          <button 
-            className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            📋 Overview
-          </button>
-          {craftsman && (
-            <button 
-              className={`tab-btn ${activeTab === 'professional' ? 'active' : ''}`}
-              onClick={() => setActiveTab('professional')}
-            >
-              💼 Professional Info
-            </button>
-          )}
-          <button 
-            className={`tab-btn ${activeTab === 'stats' ? 'active' : ''}`}
-            onClick={() => setActiveTab('stats')}
-          >
-            📊 Statistics
-          </button>
+        {/* Contact Information */}
+        <div style={{
+          background: 'white',
+          padding: '2rem',
+          borderRadius: '16px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          marginBottom: '1.5rem'
+        }}>
+          <h3 style={{ marginTop: 0, color: '#2c3e50' }}>📞 Contact Information</h3>
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #3498db' }}>
+              <strong style={{ color: '#555' }}>📧 Email:</strong>
+              <span style={{ marginLeft: '1rem', color: '#2c3e50' }}>{user.email}</span>
+            </div>
+            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #3498db' }}>
+              <strong style={{ color: '#555' }}>📱 Phone:</strong>
+              <span style={{ marginLeft: '1rem', color: '#2c3e50' }}>{user.phone}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="profile-content">
-          {/* Profile Image Edit Modal */}
-          {isEditingProfile && (
-            <div className="modal-overlay" onClick={handleCancelImageEdit}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                  <h3>Change Profile Picture</h3>
-                  <button className="btn-close" onClick={handleCancelImageEdit}>✕</button>
-                </div>
-                <div className="modal-body">
-                  <div className="image-preview">
-                    <img 
-                      src={tempImageUrl || profileImageUrl} 
-                      alt="Preview" 
-                      className="preview-image"
-                      onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/150?text=Invalid+URL';
-                      }}
-                    />
-                  </div>
-                  <div className="input-group">
-                    <label htmlFor="imageUrl">Image URL:</label>
-                    <input
-                      id="imageUrl"
-                      type="text"
-                      className="input-text"
-                      value={tempImageUrl}
-                      onChange={(e) => setTempImageUrl(e.target.value)}
-                      placeholder="Enter image URL (e.g., https://example.com/image.jpg)"
-                    />
-                  </div>
-                  <p className="help-text">💡 Tip: Use image hosting services like Imgur, or direct image URLs</p>
-                </div>
-                <div className="modal-footer">
-                  <button className="btn-primary" onClick={handleSaveProfileImage}>
-                    💾 Save Picture
-                  </button>
-                  <button className="btn-outline" onClick={handleCancelImageEdit}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
+        {/* Account Details */}
+        <div style={{
+          background: 'white',
+          padding: '2rem',
+          borderRadius: '16px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ marginTop: 0, color: '#2c3e50' }}>ℹ️ Account Details</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            <div style={{ padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', borderLeft: '4px solid #3498db' }}>
+              <strong style={{ display: 'block', color: '#7f8c8d', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>User ID</strong>
+              <span style={{ color: '#2c3e50', fontWeight: '600', wordBreak: 'break-all' }}>{user.id}</span>
             </div>
-          )}
-
-          {/* Overview Tab */}
-          {activeTab === 'overview' && (
-            <div className="tab-content">
-              <div className="profile-section compact">
-                <h3 className="section-title">Personal Information</h3>
-                <div className="info-grid compact">
-                  <div className="info-item compact">
-                    <span className="info-icon">📧</span>
-                    <div className="info-content">
-                      <span className="info-label">Email</span>
-                      <span className="info-value">{user.email}</span>
-                    </div>
-                  </div>
-                  <div className="info-item compact">
-                    <span className="info-icon">📱</span>
-                    <div className="info-content">
-                      <span className="info-label">Phone</span>
-                      <span className="info-value">{user.phone}</span>
-                    </div>
-                  </div>
-                  <div className="info-item compact">
-                    <span className="info-icon">📍</span>
-                    <div className="info-content">
-                      <span className="info-label">Address</span>
-                      <span className="info-value">{user.address}</span>
-                    </div>
-                  </div>
-                  <div className="info-item compact">
-                    <span className="info-icon">🆔</span>
-                    <div className="info-content">
-                      <span className="info-label">User ID</span>
-                      <span className="info-value">#{user.id}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {craftsman && (
-                <div className="profile-section">
-                  <div className="section-header">
-                    <h3 className="section-title">About Me</h3>
-                    {!isEditingBio && (
-                      <button 
-                        className="btn-edit"
-                        onClick={() => setIsEditingBio(true)}
-                      >
-                        ✏️ Edit
-                      </button>
-                    )}
-                  </div>
-                  
-                  {isEditingBio ? (
-                    <div className="bio-editor">
-                      <textarea
-                        className="bio-textarea"
-                        value={bioText}
-                        onChange={(e) => setBioText(e.target.value)}
-                        placeholder="Tell your clients about yourself, your experience, and specialties..."
-                        rows="6"
-                      />
-                      <div className="bio-actions">
-                        <button className="btn-primary" onClick={handleSaveBio}>
-                          💾 Save Bio
-                        </button>
-                        <button 
-                          className="btn-outline" 
-                          onClick={() => {
-                            setBioText(craftsman.bio || '');
-                            setIsEditingBio(false);
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="bio-text">
-                      {craftsman.bio || 'No bio added yet. Click Edit to add your professional description.'}
-                    </p>
-                  )}
-                </div>
-              )}
+            <div style={{ padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', borderLeft: '4px solid #27ae60' }}>
+              <strong style={{ display: 'block', color: '#7f8c8d', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Registered</strong>
+              <span style={{ color: '#2c3e50', fontWeight: '600' }}>{formatDate(user.registerDate)}</span>
             </div>
-          )}
-
-          {/* Professional Info Tab (Craftsmen Only) */}
-          {activeTab === 'professional' && craftsman && (
-            <div className="tab-content">
-              <div className="profile-section">
-                <h3 className="section-title">Professional Details</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <span className="info-label">🛠️ Profession</span>
-                    <span className="info-value">{craftsman.profession}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">📅 Experience</span>
-                    <span className="info-value">{craftsman.experienceYears} years</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">⭐ Rating</span>
-                    <span className="info-value">{craftsman.rating} / 5.0</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">💬 Reviews</span>
-                    <span className="info-value">{craftsman.reviews} reviews</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">💰 Hourly Rate</span>
-                    <span className="info-value">${craftsman.price}/hour</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">🏙️ City</span>
-                    <span className="info-value">{craftsman.city}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">📍 Availability</span>
-                    <span className={`availability-badge ${craftsman.availability ? 'available' : 'unavailable'}`}>
-                      {craftsman.availability ? '✅ Available' : '❌ Unavailable'}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">🕐 Time Slots</span>
-                    <span className="info-value">{craftsman.availableTimes.length} slots</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="profile-section">
-                <h3 className="section-title">Portfolio</h3>
-                {craftsman.portfolio && craftsman.portfolio.length > 0 ? (
-                  <div className="portfolio-grid">
-                    {craftsman.portfolio.map((item) => (
-                      <div key={item.id} className="portfolio-item">
-                        <img src={item.imageUrl} alt={item.title} className="portfolio-image" />
-                        <h4 className="portfolio-title">{item.title}</h4>
-                        <p className="portfolio-description">{item.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="empty-state">No portfolio items yet.</p>
-                )}
-              </div>
+            <div style={{ padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', borderLeft: '4px solid #f39c12' }}>
+              <strong style={{ display: 'block', color: '#7f8c8d', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Created At</strong>
+              <span style={{ color: '#2c3e50', fontWeight: '600' }}>{formatDate(user.createdAt)}</span>
             </div>
-          )}
-
-          {/* Statistics Tab */}
-          {activeTab === 'stats' && (
-            <div className="tab-content">
-              <div className="profile-section">
-                <h3 className="section-title">Reservation Statistics</h3>
-                <div className="stats-grid">
-                  <div className="stat-card">
-                    <div className="stat-icon">📊</div>
-                    <div className="stat-value">{reservationStats.total}</div>
-                    <div className="stat-label">Total Reservations</div>
-                  </div>
-                  <div className="stat-card pending">
-                    <div className="stat-icon">⏳</div>
-                    <div className="stat-value">{reservationStats.pending}</div>
-                    <div className="stat-label">Pending</div>
-                  </div>
-                  <div className="stat-card confirmed">
-                    <div className="stat-icon">✅</div>
-                    <div className="stat-value">{reservationStats.confirmed}</div>
-                    <div className="stat-label">Confirmed</div>
-                  </div>
-                  <div className="stat-card completed">
-                    <div className="stat-icon">🎉</div>
-                    <div className="stat-value">{reservationStats.completed}</div>
-                    <div className="stat-label">Completed</div>
-                  </div>
-                </div>
-              </div>
+            <div style={{ padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', borderLeft: '4px solid #9b59b6' }}>
+              <strong style={{ display: 'block', color: '#7f8c8d', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Last Updated</strong>
+              <span style={{ color: '#2c3e50', fontWeight: '600' }}>{formatDate(user.updatedAt)}</span>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

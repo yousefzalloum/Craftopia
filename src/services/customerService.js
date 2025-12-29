@@ -1,0 +1,144 @@
+/**
+ * Customer API Service
+ * Handles all customer related API calls
+ */
+
+import { post, get, put, parseApiError } from '../utils/api';
+
+/**
+ * Register a new customer
+ * @param {Object} customerData - Registration data
+ * @param {string} customerData.name - Customer's full name
+ * @param {string} customerData.email - Email address
+ * @param {string} customerData.password - Password
+ * @param {string} customerData.phone_number - Phone number
+ * @returns {Promise<Object>} Response with customer data and token
+ */
+export const registerCustomer = async (customerData) => {
+  try {
+    const response = await post('/customers/signup', customerData);
+    
+    // Store token in localStorage if provided
+    if (response.token) {
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('role', response.role || 'customer');
+      localStorage.setItem('userId', response._id);
+    }
+    
+    return response;
+  } catch (error) {
+    throw new Error(parseApiError(error));
+  }
+};
+
+/**
+ * Login customer
+ * @param {Object} credentials
+ * @param {string} credentials.email - Email address
+ * @param {string} credentials.password - Password
+ * @returns {Promise<Object>} Response with customer data and token
+ */
+export const loginCustomer = async (credentials) => {
+  try {
+    // Prepare request payload with trimmed email
+    const loginPayload = {
+      email: credentials.email.trim(),
+      password: credentials.password
+    };
+    
+    // Calculate final URL
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const finalUrl = `${baseUrl}/customers/login`;
+    
+    // Log request details
+    console.log('🔐 Login Request Payload:', {
+      email: loginPayload.email,
+      emailLength: loginPayload.email.length,
+      passwordLength: loginPayload.password.length
+    });
+    console.log('🔗 Final Request URL:', finalUrl);
+    
+    const response = await post('/customers/login', loginPayload);
+    
+    // Log success response
+    console.log('✅ Login Success - Response Status: 200');
+    console.log('✅ Login Response Data:', {
+      _id: response._id,
+      name: response.name,
+      role: response.role,
+      token: response.token ? '✓ Token received' : '✗ No token'
+    });
+    
+    // Store token, role, and userId in localStorage
+    if (response.token) {
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('role', response.role);
+      localStorage.setItem('userId', response._id);
+      console.log('💾 Stored in localStorage - token, role, userId');
+    }
+    
+    return response;
+  } catch (error) {
+    // Log detailed error information
+    console.error('❌ Login Failed');
+    console.error('❌ Error Status:', error.status || 'Unknown');
+    console.error('❌ Error Message:', error.message);
+    console.error('❌ Error Response Data:', error.data);
+    
+    // Create error object that preserves status code for Login.jsx fallback logic
+    const err = new Error(parseApiError(error));
+    err.status = error.status;
+    throw err;
+  }
+};
+
+/**
+ * Get authenticated customer profile
+ * Uses Bearer token from localStorage for authentication
+ * @returns {Promise<Object>} Customer profile data
+ */
+export const getCustomerProfile = async () => {
+  try {
+    console.log('📡 Fetching customer profile from GET /customers/profile');
+    const response = await get('/customers/profile');
+    console.log('✅ Customer profile fetched:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Error fetching customer profile:', error.status, error.message);
+    // Preserve error status for caller to handle 401
+    const err = new Error(parseApiError(error));
+    err.status = error.status;
+    throw err;
+  }
+};
+
+/**
+ * Update customer profile
+ * @param {string} customerId - Customer ID
+ * @param {Object} updateData - Data to update
+ * @returns {Promise<Object>} Updated customer data
+ */
+export const updateCustomerProfile = async (customerId, updateData) => {
+  try {
+    const response = await put(`/customers/${customerId}`, updateData);
+    
+    // Update local storage if successful
+    const currentUser = JSON.parse(localStorage.getItem('craftopia_current_user') || '{}');
+    const updatedUser = { ...currentUser, ...updateData };
+    localStorage.setItem('craftopia_current_user', JSON.stringify(updatedUser));
+    
+    return response;
+  } catch (error) {
+    throw new Error(parseApiError(error));
+  }
+};
+
+/**
+ * Logout customer
+ * Clears local storage and authentication data
+ */
+export const logoutCustomer = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('role');
+  localStorage.removeItem('userId');
+};

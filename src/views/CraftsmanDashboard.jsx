@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { getArtisanProfile } from '../services/craftsmanService';
 import { CraftsmanController } from '../controllers/CraftsmanController';
 import { ReservationController } from '../controllers/ReservationController';
 import { CraftController } from '../controllers/CraftController';
@@ -8,6 +10,7 @@ import '../styles/CraftsmanDashboard.css';
 
 const CraftsmanDashboard = () => {
   const navigate = useNavigate();
+  const { isLoggedIn, role, user, profile, updateProfile } = useAuth();
   const [currentUser, setCurrentUser] = useState(null);
   const [craftsman, setCraftsman] = useState(null);
   const [bookings, setBookings] = useState([]);
@@ -20,6 +23,7 @@ const CraftsmanDashboard = () => {
     description: '',
     imageUrl: ''
   });
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   
   // All possible time slots
   const allTimeSlots = [
@@ -30,36 +34,64 @@ const CraftsmanDashboard = () => {
   const [selectedTimes, setSelectedTimes] = useState([]);
 
   useEffect(() => {
-    // Check if user is logged in as craftsman
-    const craftsmanSession = localStorage.getItem('craftopia_craftsman');
-    
-    if (!craftsmanSession) {
-      alert('Please login as a craftsman to access this page');
+    // Check if user is logged in as artisan
+    if (!isLoggedIn || role !== 'artisan') {
+      console.log('❌ Not logged in as artisan. isLoggedIn:', isLoggedIn, 'role:', role);
+      alert('Please login as an artisan to access this page');
       navigate('/login');
       return;
     }
     
-    const user = JSON.parse(craftsmanSession);
+    console.log('✅ Artisan authenticated:', user?.name);
     setCurrentUser(user);
     
-    // Load craftsman data using the logged-in user's email
-    const craftsmanData = CraftsmanController.getCraftsmanByEmail(user.email);
-    
-    if (!craftsmanData) {
-      alert('Craftsman profile not found');
-      navigate('/login');
-      return;
-    }
-    
-    setCraftsman(craftsmanData);
-    setSelectedTimes(craftsmanData.availableTimes || []);
-    setPortfolio(craftsmanData.portfolio || []);
+    // Fetch real artisan profile from API (only once if not already fetched)
+    const fetchProfile = async () => {
+      if (profile) {
+        console.log('📦 Using cached profile from AuthContext');
+        setCraftsman(profile);
+        setPortfolio(profile.portfolioImages || []);
+        setSelectedTimes(profile.availableTimes || []);
+        return;
+      }
+      
+      try {
+        setIsLoadingProfile(true);
+        console.log('📋 Fetching artisan profile from API...');
+        const apiProfile = await getArtisanProfile();
+        console.log('✅ Profile fetched from API:', apiProfile);
+        
+        // Store in AuthContext for reuse
+        updateProfile(apiProfile);
+        
+        // Set local state
+        setCraftsman(apiProfile);
+        setPortfolio(apiProfile.portfolioImages || []);
+        setSelectedTimes(apiProfile.availableTimes || []);
+      } catch (error) {
+        console.error('⚠️ Failed to fetch profile from API:', error.message);
+        // Fallback to demo data if available
+        const demoData = CraftsmanController.getCraftsmanByEmail(user?.email);
+        if (demoData) {
+          console.log('Using fallback demo data');
+          setCraftsman(demoData);
+          setPortfolio(demoData.portfolio || []);
+          setSelectedTimes(demoData.availableTimes || []);
+        }
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
 
-    // Load bookings
+    fetchProfile();
+
+    // Load bookings (from demo data for now)
     const allReservations = ReservationController.getReservations();
-    const craftsmanBookings = CraftsmanController.getBookings(craftsmanData.id, allReservations);
-    setBookings(craftsmanBookings);
-  }, [navigate]);
+    if (craftsman?.id) {
+      const craftsmanBookings = CraftsmanController.getBookings(craftsman.id, allReservations);
+      setBookings(craftsmanBookings);
+    }
+  }, [navigate, isLoggedIn, role, user, profile, updateProfile]);
 
   const filteredBookings = filterStatus === 'all' 
     ? bookings 

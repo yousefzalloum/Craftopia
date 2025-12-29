@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginCraftsman } from '../services/craftsmanService';
+import { useAuth } from '../context/AuthContext';
 import '../styles/Login.css';
 
 const CraftsmanLogin = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -17,47 +21,28 @@ const CraftsmanLogin = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
+    console.log("ARTISAN LOGIN SUBMIT TRIGGERED");
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
-    // Demo craftsman credentials
-    const demoCraftsmen = [
-      { email: 'ahmad.hassan@craftopia.com', password: 'craftsman123', id: 1, name: 'Ahmad Hassan' },
-      { email: 'sarah.mitchell@craftopia.com', password: 'craftsman123', id: 2, name: 'Sarah Mitchell' },
-      { email: 'james.wilson@craftopia.com', password: 'craftsman123', id: 3, name: 'James Wilson' }
-    ];
-
-    const craftsman = demoCraftsmen.find(
-      c => c.email === formData.email && c.password === formData.password
-    );
-
-    if (craftsman) {
-      // Store craftsman session
-      localStorage.setItem('craftopia_craftsman', JSON.stringify({
-        id: craftsman.id,
-        name: craftsman.name,
-        email: craftsman.email,
-        type: 'craftsman'
-      }));
+    try {
+      const response = await loginCraftsman(formData);
       
-      // Redirect to craftsman dashboard
+      console.log('✅ Artisan login successful, updating auth context...');
+      
+      // Update global auth state with artisan data
+      login(response);
+      
+      // Redirect to artisan dashboard after successful login
       navigate('/craftsman-dashboard');
-    } else {
-      setError('Invalid email or password. Use craftsman credentials.');
+    } catch (err) {
+      console.error('❌ Artisan login error caught in component:', err.message);
+      setError(err.message || 'Invalid email or password');
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleDemoLogin = () => {
-    const demoCraftsman = {
-      id: 1,
-      name: 'Ahmad Hassan',
-      email: 'ahmad.hassan@craftopia.com',
-      type: 'craftsman'
-    };
-    
-    localStorage.setItem('craftopia_craftsman', JSON.stringify(demoCraftsman));
-    navigate('/craftsman-dashboard');
   };
 
   return (
@@ -68,6 +53,8 @@ const CraftsmanLogin = () => {
             <h1>🔨 Craftsman Portal</h1>
             <p>Login to manage your business</p>
           </div>
+
+          {error && <div className="error-message">{error}</div>}
 
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="form-group">
@@ -80,6 +67,7 @@ const CraftsmanLogin = () => {
                 onChange={handleChange}
                 placeholder="your.email@craftopia.com"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -93,31 +81,17 @@ const CraftsmanLogin = () => {
                 onChange={handleChange}
                 placeholder="Enter your password"
                 required
+                disabled={isLoading}
               />
             </div>
 
-            {error && <div className="error-message">{error}</div>}
-
-            <button type="submit" className="btn-submit">
-              Login as Craftsman
-            </button>
-
-            <button 
-              type="button" 
-              className="btn-demo"
-              onClick={handleDemoLogin}
-            >
-              Use Demo Craftsman Account
+            <button type="submit" className="btn-submit" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Login as Craftsman'}
             </button>
           </form>
 
           <div className="login-footer">
             <p>Are you a customer? <a href="/login">Customer Login</a></p>
-            <div className="demo-credentials">
-              <p><strong>Demo Credentials:</strong></p>
-              <p>Email: ahmad.hassan@craftopia.com</p>
-              <p>Password: craftsman123</p>
-            </div>
           </div>
         </div>
       </div>

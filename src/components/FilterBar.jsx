@@ -1,42 +1,76 @@
 import '../styles/FilterBar.css';
 
 const FilterBar = ({ 
-  categories, 
-  selectedCategory, 
-  onCategoryChange, 
-  sortBy, 
-  onSortChange 
+  craftTypes = [],
+  locations = [],
+  selectedCraftType = '',
+  selectedLocation = '',
+  selectedRating = '',
+  availableOnly = false,
+  onCraftTypeChange,
+  onLocationChange,
+  onRatingChange,
+  onAvailabilityChange
 }) => {
   return (
     <div className="filter-bar">
       <div className="filter-section">
-        <label className="filter-label">Category:</label>
+        <label className="filter-label">🔨 Craft Type:</label>
         <select 
           className="filter-select"
-          value={selectedCategory}
-          onChange={(e) => onCategoryChange(e.target.value)}
+          value={selectedCraftType}
+          onChange={(e) => onCraftTypeChange(e.target.value)}
         >
-          {categories.map((category) => (
-            <option key={category} value={category}>
-              {category}
+          <option value="">All Crafts</option>
+          {craftTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
             </option>
           ))}
         </select>
       </div>
 
       <div className="filter-section">
-        <label className="filter-label">Sort by:</label>
+        <label className="filter-label">📍 Location:</label>
         <select 
           className="filter-select"
-          value={sortBy}
-          onChange={(e) => onSortChange(e.target.value)}
+          value={selectedLocation}
+          onChange={(e) => onLocationChange(e.target.value)}
         >
-          <option value="default">Default</option>
-          <option value="name">Name (A-Z)</option>
-          <option value="price-low">Price (Low to High)</option>
-          <option value="price-high">Price (High to Low)</option>
-          <option value="rating">Rating</option>
+          <option value="">All Locations</option>
+          {locations.map((location) => (
+            <option key={location} value={location}>
+              {location}
+            </option>
+          ))}
         </select>
+      </div>
+
+      <div className="filter-section">
+        <label className="filter-label">⭐ Rating:</label>
+        <select 
+          className="filter-select"
+          value={selectedRating}
+          onChange={(e) => onRatingChange(e.target.value)}
+        >
+          <option value="">All Ratings</option>
+          <option value="4">4+ Stars</option>
+          <option value="3">3+ Stars</option>
+          <option value="2">2+ Stars</option>
+          <option value="1">1+ Stars</option>
+        </select>
+      </div>
+
+      <div className="filter-section">
+        <label className="filter-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <input 
+            type="checkbox"
+            checked={availableOnly}
+            onChange={(e) => onAvailabilityChange(e.target.checked)}
+            style={{ width: 'auto', cursor: 'pointer' }}
+          />
+          ✅ Available Only
+        </label>
       </div>
     </div>
   );

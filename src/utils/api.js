@@ -4,10 +4,12 @@
  */
 
 // Base API URL - can be configured via environment variable
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const envApiUrl = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = envApiUrl || 'http://localhost:5000/api';
 
-// Debug: Log the API base URL
+// Debug: Log the API base URL and source
 console.log('🔗 API Base URL:', API_BASE_URL);
+console.log('📦 Using VITE_API_BASE_URL:', envApiUrl ? 'Yes (from env variable)' : 'No (using default)');
 
 /**
  * Custom error class for API errors
@@ -39,7 +41,7 @@ export const apiRequest = async (endpoint, options = {}) => {
   };
 
   // Add authorization token if available
-  const token = localStorage.getItem('craftopia_token');
+  const token = localStorage.getItem('token');
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
