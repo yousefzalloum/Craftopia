@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getCustomerReservations, cancelReservation } from '../services/customerService';
+import { post } from '../utils/api';
 import Loading from '../components/Loading';
 import '../styles/Reservations.css';
 
@@ -13,6 +14,12 @@ const Reservations = () => {
   const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [cancellingId, setCancellingId] = useState(null);
+  
+  // Review state
+  const [reviewingId, setReviewingId] = useState(null);
+  const [reviewForm, setReviewForm] = useState({ stars_number: 5, comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewedArtisans, setReviewedArtisans] = useState(new Set());
 
   useEffect(() => {
     // Check authentication
@@ -33,9 +40,11 @@ const Reservations = () => {
         setLoading(true);
         setError(null);
         const data = await getCustomerReservations();
-        // Filter out "New" status reservations (only show accepted/confirmed ones)
-        const filteredData = (data || []).filter(res => res.status !== 'New');
-        setReservations(filteredData);
+        // Show all reservations including "New" (pending) ones
+        setReservations(data || []);
+        
+        // Fetch customer's existing reviews to check which artisans they've already reviewed
+        await fetchCustomerReviews();
       } catch (err) {
         console.error('Failed to fetch reservations:', err);
         setError(err.message || 'Failed to load reservations');
@@ -46,6 +55,65 @@ const Reservations = () => {
 
     fetchReservations();
   }, [isLoggedIn, role, navigate]);
+
+  // Fetch customer's reviews to check which artisans they've already reviewed
+  const fetchCustomerReviews = async () => {
+    try {
+      const response = await get('/reviews/customer');
+      const reviews = Array.isArray(response) ? response : (response.reviews || []);
+      
+      // Create a set of artisan IDs that this customer has already reviewed
+      const reviewedArtisanIds = new Set(reviews.map(review => review.artisan));
+      setReviewedArtisans(reviewedArtisanIds);
+      
+      console.log('✅ Customer has reviewed these artisans:', Array.from(reviewedArtisanIds));
+    } catch (err) {
+      console.error('❌ Failed to fetch customer reviews:', err);
+      // Don't show error, just continue
+    }
+  };
+
+  const handleOpenReviewForm = (reservationId) => {
+    setReviewingId(reservationId);
+    setReviewForm({ stars_number: 5, comment: '' });
+  };
+
+  const handleCloseReviewForm = () => {
+    setReviewingId(null);
+    setReviewForm({ stars_number: 5, comment: '' });
+  };
+
+  const handleSubmitReview = async (reservation) => {
+    if (!reviewForm.comment.trim()) {
+      alert('Please add a comment to your review');
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      
+      const reviewData = {
+        artisanId: reservation.artisan._id,
+        stars_number: reviewForm.stars_number,
+        comment: reviewForm.comment.trim()
+      };
+
+      await post('/reviews', reviewData);
+      
+      // Mark this artisan as reviewed
+      setReviewedArtisans(prev => new Set([...prev, reservation.artisan._id]));
+      
+      // Close the form
+      handleCloseReviewForm();
+      
+      alert('Review submitted successfully!');
+    } catch (err) {
+      console.error('Failed to submit review:', err);
+      alert(err.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const handleCancelReservation = async (reservationId) => {
     if (!window.confirm('Are you sure you want to cancel this reservation?')) {
@@ -58,9 +126,8 @@ const Reservations = () => {
       
       // Refresh reservations list
       const data = await getCustomerReservations();
-      // Filter out "New" status reservations
-      const filteredData = (data || []).filter(res => res.status !== 'New');
-      setReservations(filteredData);
+      // Show all reservations including "New" (pending) ones
+      setReservations(data || []);
       
       alert('Reservation cancelled successfully');
     } catch (err) {
@@ -95,7 +162,9 @@ const Reservations = () => {
       'Confirmed': '#27ae60',
       'In Progress': '#f39c12',
       'Completed': '#95a5a6',
-      'Cancelled': '#e74c3c'
+      'Cancelled': '#e74c3c',
+      'Accepted': '#27ae60',
+      'Rejected': '#e74c3c'
     };
     return colors[status] || '#7f8c8d';
   };
@@ -148,16 +217,22 @@ const Reservations = () => {
                 All ({reservations.length})
               </button>
               <button 
-                className={`filter-btn ${filterStatus === 'Rejected' ? 'active' : ''}`}
-                onClick={() => setFilterStatus('Rejected')}
+                className={`filter-btn ${filterStatus === 'New' ? 'active' : ''}`}
+                onClick={() => setFilterStatus('New')}
               >
-                Rejected ({reservations.filter(r => r.status === 'Rejected').length})
+                Pending ({reservations.filter(r => r.status === 'New').length})
               </button>
               <button 
                 className={`filter-btn ${filterStatus === 'Accepted' ? 'active' : ''}`}
                 onClick={() => setFilterStatus('Accepted')}
               >
                 Accepted ({reservations.filter(r => r.status === 'Accepted').length})
+              </button>
+              <button 
+                className={`filter-btn ${filterStatus === 'Rejected' ? 'active' : ''}`}
+                onClick={() => setFilterStatus('Rejected')}
+              >
+                Rejected ({reservations.filter(r => r.status === 'Rejected').length})
               </button>
               <button 
                 className={`filter-btn ${filterStatus === 'Completed' ? 'active' : ''}`}
@@ -312,11 +387,186 @@ const Reservations = () => {
                           {cancellingId === reservation._id ? 'Cancelling...' : 'Cancel'}
                         </button>
                       )}
+                      {reservation.status === 'Completed' && reservation.artisan?._id && !reviewedArtisans.has(reservation.artisan._id) && (
+                        <button
+                          onClick={() => handleOpenReviewForm(reservation._id)}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            background: '#27ae60',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            transition: 'background 0.3s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = '#229954';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = '#27ae60';
+                          }}
+                        >
+                          Add Review
+                        </button>
+                      )}
+                      {reservation.status === 'Completed' && reservation.artisan?._id && reviewedArtisans.has(reservation.artisan._id) && (
+                        <span style={{
+                          padding: '0.5rem 1rem',
+                          background: '#95a5a6',
+                          color: 'white',
+                          borderRadius: '6px',
+                          fontSize: '0.9rem',
+                          display: 'inline-block'
+                        }}>
+                          ✓ Reviewed
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Review Modal */}
+        {reviewingId && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+            }}>
+              <h2 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>Add Review</h2>
+              
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#2c3e50' }}>
+                  Rating (Stars)
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', fontSize: '2rem' }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      onClick={() => setReviewForm({ ...reviewForm, stars_number: star })}
+                      style={{
+                        cursor: 'pointer',
+                        color: star <= reviewForm.stars_number ? '#f39c12' : '#ddd',
+                        transition: 'color 0.2s ease'
+                      }}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <div style={{ marginTop: '0.5rem', color: '#7f8c8d', fontSize: '0.9rem' }}>
+                  {reviewForm.stars_number} {reviewForm.stars_number === 1 ? 'star' : 'stars'}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#2c3e50' }}>
+                  Comment
+                </label>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  placeholder="Share your experience with this artisan..."
+                  rows="5"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    outline: 'none',
+                    transition: 'border-color 0.3s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3498db';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#ddd';
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleCloseReviewForm}
+                  disabled={submittingReview}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: '#95a5a6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    cursor: submittingReview ? 'not-allowed' : 'pointer',
+                    opacity: submittingReview ? 0.6 : 1,
+                    transition: 'background 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!submittingReview) {
+                      e.target.style.background = '#7f8c8d';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!submittingReview) {
+                      e.target.style.background = '#95a5a6';
+                    }
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const reservation = reservations.find(r => r._id === reviewingId);
+                    handleSubmitReview(reservation);
+                  }}
+                  disabled={submittingReview || !reviewForm.comment.trim()}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: submittingReview || !reviewForm.comment.trim() ? '#95a5a6' : '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    cursor: submittingReview || !reviewForm.comment.trim() ? 'not-allowed' : 'pointer',
+                    opacity: submittingReview || !reviewForm.comment.trim() ? 0.6 : 1,
+                    transition: 'background 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!submittingReview && reviewForm.comment.trim()) {
+                      e.target.style.background = '#2980b9';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!submittingReview && reviewForm.comment.trim()) {
+                      e.target.style.background = '#3498db';
+                    }
+                  }}
+                >
+                  {submittingReview ? 'Submitting...' : 'Submit Review'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

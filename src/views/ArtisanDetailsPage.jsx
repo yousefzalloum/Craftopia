@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getCraftsmanProfile } from '../services/craftsmanService';
+import { get } from '../utils/api';
 import Loading from '../components/Loading';
 import '../styles/CraftsmanProfile.css';
 
@@ -10,6 +11,8 @@ const ArtisanDetailsPage = () => {
   const [artisan, setArtisan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   useEffect(() => {
     const fetchArtisanDetails = async () => {
@@ -43,6 +46,45 @@ const ArtisanDetailsPage = () => {
 
     if (id) {
       fetchArtisanDetails();
+    }
+  }, [id]);
+
+  // Fetch reviews for this artisan
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!id) return;
+      
+      try {
+        setReviewsLoading(true);
+        console.log('📋 Fetching reviews for artisan:', id);
+        console.log('📋 Using endpoint: /reviews/artisan/' + id);
+        const data = await get(`/reviews/artisan/${id}`);
+        console.log('✅ Reviews fetched - RAW DATA:', data);
+        console.log('✅ Is Array?', Array.isArray(data));
+        console.log('✅ Data type:', typeof data);
+        
+        // Handle both array and object responses
+        if (Array.isArray(data)) {
+          console.log('✅ Setting reviews array with length:', data.length);
+          setReviews(data);
+        } else if (data && Array.isArray(data.reviews)) {
+          console.log('✅ Setting reviews from data.reviews with length:', data.reviews.length);
+          setReviews(data.reviews);
+        } else {
+          console.log('⚠️ No valid reviews found, data structure:', data);
+          setReviews([]);
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch reviews:', err);
+        // Don't show error to user, just show empty reviews
+        setReviews([]);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchReviews();
     }
   }, [id]);
 
@@ -92,6 +134,27 @@ const ArtisanDetailsPage = () => {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const formatReviewDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const renderStars = (rating) => {
+    return (
+      <div style={{ display: 'flex', gap: '0.25rem', fontSize: '1.2rem' }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span key={star} style={{ color: star <= rating ? '#f39c12' : '#ddd' }}>
+            ★
+          </span>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -198,6 +261,59 @@ const ArtisanDetailsPage = () => {
               <div className="empty-icon">🖼️</div>
               <h3>No portfolio items yet</h3>
               <p>This artisan hasn't added any work samples yet.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Reviews Section */}
+        <div className="profile-section" style={{ border: '3px solid red', minHeight: '200px' }}>
+          <h2>⭐ Customer Reviews ({reviews.length})</h2>
+          <p style={{ color: 'red', fontWeight: 'bold' }}>DEBUG: Reviews section is rendering. Reviews count: {reviews.length}</p>
+          {reviewsLoading ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <p>Loading reviews...</p>
+            </div>
+          ) : reviews.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {reviews.map((review) => (
+                <div 
+                  key={review._id} 
+                  style={{
+                    background: '#f8f9fa',
+                    padding: '1.5rem',
+                    borderRadius: '12px',
+                    border: '1px solid #dee2e6'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                        <strong style={{ fontSize: '1.1rem', color: '#2c3e50' }}>
+                          {review.customer?.name || 'Customer'}
+                        </strong>
+                        {renderStars(review.stars_number)}
+                      </div>
+                      <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: 0 }}>
+                        {formatReviewDate(review.review_date)}
+                      </p>
+                    </div>
+                  </div>
+                  <p style={{ 
+                    color: '#2c3e50', 
+                    lineHeight: '1.6', 
+                    margin: 0,
+                    fontSize: '1rem'
+                  }}>
+                    {review.comment}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon">💬</div>
+              <h3>No reviews yet</h3>
+              <p>This artisan hasn't received any reviews yet.</p>
             </div>
           )}
         </div>
