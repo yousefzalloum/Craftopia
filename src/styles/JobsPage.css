@@ -1,0 +1,401 @@
+/**
+ * JobsPage Styles
+ * Styles for the incoming jobs page with table layout
+ */
+
+.jobs-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 70vh;
+}
+
+.jobs-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.jobs-header h1 {
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.jobs-header p {
+  font-size: 1.1rem;
+  color: #7f8c8d;
+}
+
+/* Filters Section */
+.jobs-filters {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 0.75rem 1.5rem;
+  border: 2px solid #e1e8ed;
+  background: white;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #2c3e50;
+}
+
+.filter-btn:hover {
+  border-color: #3498db;
+  background: #f8f9fa;
+}
+
+.filter-btn.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+/* Search Box */
+.search-box {
+  position: relative;
+  max-width: 500px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.875rem 2.5rem 0.875rem 1rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.search-input::placeholder {
+  color: #95a5a6;
+}
+
+.clear-search {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.clear-search:hover {
+  background: #c0392b;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Error Container */
+.error-container {
+  text-align: center;
+  padding: 3rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.error-container h2 {
+  color: #e74c3c;
+  margin-bottom: 1rem;
+}
+
+.error-container p {
+  color: #7f8c8d;
+  margin-bottom: 1.5rem;
+}
+
+.btn-retry {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-retry:hover {
+  background: #2980b9;
+}
+
+/* No Jobs State */
+.no-jobs {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.no-jobs-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.no-jobs h2 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.no-jobs p {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+
+/* Jobs Table Container */
+.jobs-table-container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+.jobs-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+
+.jobs-table thead {
+  background: #34495e;
+  color: white;
+}
+
+.jobs-table thead th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.jobs-table tbody tr {
+  border-bottom: 1px solid #ecf0f1;
+  transition: background 0.2s ease;
+}
+
+.jobs-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.jobs-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.jobs-table tbody td {
+  padding: 1rem;
+  color: #2c3e50;
+  vertical-align: top;
+}
+
+/* Column Specific Styles */
+.customer-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.customer-email {
+  color: #3498db;
+  font-size: 0.9rem;
+}
+
+.customer-phone {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.job-description {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #555;
+}
+
+.job-date {
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.job-price {
+  font-weight: 600;
+  color: #27ae60;
+  white-space: nowrap;
+}
+
+.job-created {
+  font-size: 0.85rem;
+  color: #95a5a6;
+  white-space: nowrap;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-confirmed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-completed {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Action Buttons */
+.job-actions {
+  white-space: nowrap;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+.btn-accept,
+.btn-reject {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-accept {
+  background: #27ae60;
+  color: white;
+}
+
+.btn-accept:hover:not(:disabled) {
+  background: #229954;
+  transform: translateY(-1px);
+}
+
+.btn-reject {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn-reject:hover:not(:disabled) {
+  background: #c0392b;
+  transform: translateY(-1px);
+}
+
+.btn-accept:disabled,
+.btn-reject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.no-action {
+  color: #bdc3c7;
+  font-size: 1.2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .jobs-table {
+    min-width: 1000px;
+  }
+}
+
+@media (max-width: 768px) {
+  .jobs-page {
+    padding: 1rem;
+  }
+
+  .jobs-header h1 {
+    font-size: 2rem;
+  }
+
+  .jobs-header p {
+    font-size: 1rem;
+  }
+
+  .jobs-table-container {
+    padding: 0.5rem;
+  }
+
+  .jobs-table thead th,
+  .jobs-table tbody td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .no-jobs {
+    padding: 3rem 1rem;
+  }
+
+  .no-jobs-icon {
+    font-size: 4rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .btn-accept,
+  .btn-reject {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}

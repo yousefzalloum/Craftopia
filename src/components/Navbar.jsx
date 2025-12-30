@@ -39,7 +39,12 @@ const Navbar = () => {
                 </Link>
               </li>
               <li className="navbar-item">
-                <Link to="/profile" className="navbar-link" title={displayEmail}>
+                <Link to="/jobs" className="navbar-link">
+                  📋 Jobs
+                </Link>
+              </li>
+              <li className="navbar-item">
+                <Link to="/artisan-profile" className="navbar-link" title={displayEmail}>
                   👤 {displayName}
                 </Link>
               </li>

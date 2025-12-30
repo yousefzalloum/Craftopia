@@ -142,3 +142,60 @@ export const logoutCustomer = () => {
   localStorage.removeItem('role');
   localStorage.removeItem('userId');
 };
+
+/**
+ * Create a reservation with an artisan
+ * @param {Object} reservationData - Reservation details
+ * @param {string} reservationData.artisan - Artisan ID
+ * @param {string} reservationData.description - Service description
+ * @param {string} reservationData.start_date - Start date (ISO format)
+ * @param {number} reservationData.total_price - Total price
+ * @returns {Promise<Object>} Created reservation
+ */
+export const createReservation = async (reservationData) => {
+  try {
+    console.log('📡 Creating reservation:', reservationData);
+    const response = await post('/reservations', {
+      ...reservationData,
+      status: 'New'
+    });
+    console.log('✅ Reservation created:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Error creating reservation:', error);
+    throw new Error(parseApiError(error));
+  }
+};
+
+/**
+ * Get customer's reservations
+ * @returns {Promise<Array>} Array of reservation objects with artisan details
+ */
+export const getCustomerReservations = async () => {
+  try {
+    console.log('📡 Fetching customer reservations from GET /reservations/my-requests');
+    const response = await get('/reservations/my-requests');
+    console.log('✅ Customer reservations fetched:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Error fetching customer reservations:', error);
+    throw new Error(parseApiError(error));
+  }
+};
+
+/**
+ * Cancel a reservation
+ * @param {string} reservationId - Reservation ID
+ * @returns {Promise<Object>} Cancelled reservation
+ */
+export const cancelReservation = async (reservationId) => {
+  try {
+    console.log('📡 Cancelling reservation:', reservationId);
+    const response = await post(`/reservations/${reservationId}/cancel`);
+    console.log('✅ Reservation cancelled:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Error cancelling reservation:', error);
+    throw new Error(parseApiError(error));
+  }
+};

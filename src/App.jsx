@@ -16,6 +16,7 @@ import CraftsmanDashboard from './views/CraftsmanDashboard';
 import CraftsmanProfile from './views/CraftsmanProfile';
 import ArtisanProfilePage from './views/ArtisanProfilePage';
 import ArtisanDetailsPage from './views/ArtisanDetailsPage';
+import JobsPage from './views/JobsPage';
 import './styles/App.css';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
               <Route path="/artisan-profile" element={<ArtisanProfilePage />} />
               <Route path="/artisans/:id" element={<ArtisanDetailsPage />} />
               <Route path="/craftsman/:id" element={<CraftsmanProfile />} />
+              <Route path="/jobs" element={<JobsPage />} />
             </Routes>
           </main>
           <Footer />

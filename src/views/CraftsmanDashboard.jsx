@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getArtisanProfile } from '../services/craftsmanService';
+import { apiRequest } from '../utils/api';
 import { CraftsmanController } from '../controllers/CraftsmanController';
 import { ReservationController } from '../controllers/ReservationController';
 import { CraftController } from '../controllers/CraftController';
 import ReservationCard from '../components/ReservationCard';
+import Loading from '../components/Loading';
 import '../styles/CraftsmanDashboard.css';
 
 const CraftsmanDashboard = () => {
@@ -13,6 +15,10 @@ const CraftsmanDashboard = () => {
   const { isLoggedIn, role, user, profile, updateProfile } = useAuth();
   const [currentUser, setCurrentUser] = useState(null);
   const [craftsman, setCraftsman] = useState(null);
+  const [acceptedJobs, setAcceptedJobs] = useState([]);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [jobsError, setJobsError] = useState(null);
+  const [completingJobId, setCompletingJobId] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [showTimeSettings, setShowTimeSettings] = useState(false);
@@ -85,6 +91,9 @@ const CraftsmanDashboard = () => {
 
     fetchProfile();
 
+    // Fetch accepted jobs from API
+    fetchAcceptedJobs();
+
     // Load bookings (from demo data for now)
     const allReservations = ReservationController.getReservations();
     if (craftsman?.id) {
@@ -92,6 +101,75 @@ const CraftsmanDashboard = () => {
       setBookings(craftsmanBookings);
     }
   }, [navigate, isLoggedIn, role, user, profile, updateProfile]);
+
+  const fetchAcceptedJobs = async () => {
+    try {
+      setIsLoadingJobs(true);
+      setJobsError(null);
+      
+      const data = await apiRequest('/reservations/incoming-jobs', {
+        method: 'GET'
+      });
+
+      // Filter for accepted jobs only
+      const accepted = (data || []).filter(job => job.status === 'Accepted');
+      
+      // Remove duplicates based on _id
+      const uniqueAccepted = accepted.reduce((acc, current) => {
+        const exists = acc.find(item => item._id === current._id);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+      
+      setAcceptedJobs(uniqueAccepted);
+    } catch (err) {
+      console.error('❌ Error fetching accepted jobs:', err);
+      setJobsError(err.message || 'Failed to load accepted jobs');
+    } finally {
+      setIsLoadingJobs(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handleMarkAsCompleted = async (bookingId) => {
+    if (!window.confirm('Mark this booking as completed?')) {
+      return;
+    }
+
+    try {
+      setCompletingJobId(bookingId);
+      
+      await apiRequest(`/reservations/${bookingId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'Completed' })
+      });
+
+      console.log(`✅ Booking ${bookingId} marked as completed`);
+      
+      // Refresh bookings list to remove completed booking
+      await fetchAcceptedJobs();
+      
+      alert('Booking marked as completed successfully!');
+    } catch (err) {
+      console.error(`❌ Error marking booking as completed:`, err);
+      alert(`Failed to mark booking as completed: ${err.message}`);
+    } finally {
+      setCompletingJobId(null);
+    }
+  };
 
   const filteredBookings = filterStatus === 'all' 
     ? bookings 
@@ -273,13 +351,22 @@ const CraftsmanDashboard = () => {
         <div className="current-times">
           <h3>📅 Current Available Times:</h3>
           <div className="times-list">
-            {craftsman.availableTimes && craftsman.availableTimes.length > 0 ? (
-              craftsman.availableTimes.map(time => (
-                <span key={time} className="time-badge">{time}</span>
-              ))
-            ) : (
-              <p className="no-times">No available times set</p>
-            )}
+            {(() => {
+              // Sort accepted jobs by start_date ascending
+              const sortedJobs = [...acceptedJobs].sort((a, b) => 
+                new Date(a.start_date) - new Date(b.start_date)
+              );
+              
+              if (sortedJobs.length > 0) {
+                return sortedJobs.map(job => (
+                  <span key={job._id} className="time-badge">
+                    {formatDate(job.start_date)}
+                  </span>
+                ));
+              } else {
+                return <p className="no-times">No available times</p>;
+              }
+            })()}
           </div>
         </div>
 
@@ -326,9 +413,11 @@ const CraftsmanDashboard = () => {
                 />
                 <small>Enter a valid image URL from the web</small>
               </div>
-              <button className="btn-submit-work" onClick={handleAddWork}>
-                Save Work
-              </button>
+              <div className="form-actions">
+                <button className="btn-submit-work" onClick={handleAddWork}>
+                  Save Work
+                </button>
+              </div>
             </div>
           )}
 
@@ -364,7 +453,90 @@ const CraftsmanDashboard = () => {
         {/* Bookings Section */}
         <div className="bookings-section">
           <div className="section-header">
-            <h2>📋 My Bookings</h2>
+            <h2>📅 Bookings</h2>
+            <p className="section-description">Your confirmed reservations with customers</p>
+          </div>
+
+          {isLoadingJobs ? (
+            <Loading />
+          ) : jobsError ? (
+            <div className="error-message">
+              <p>⚠️ {jobsError}</p>
+              <button onClick={fetchAcceptedJobs} className="btn-retry">
+                Try Again
+              </button>
+            </div>
+          ) : (() => {
+            // Sort accepted jobs by start_date ascending
+            const sortedBookings = [...acceptedJobs].sort((a, b) => 
+              new Date(a.start_date) - new Date(b.start_date)
+            );
+
+            if (sortedBookings.length === 0) {
+              return (
+                <div className="no-bookings">
+                  <div className="no-bookings-icon">📭</div>
+                  <h3>No bookings yet</h3>
+                  <p>You haven't accepted any reservations yet. Check the Jobs page for new requests.</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="bookings-list">
+                {sortedBookings.map((booking) => (
+                  <div key={booking._id} className="booking-card">
+                    <div className="booking-card-header">
+                      <div className="customer-name">
+                        <span className="icon">👤</span>
+                        <h3>{booking.customer?.name || 'N/A'}</h3>
+                      </div>
+                      <div className="booking-price">
+                        ${booking.total_price?.toFixed(2) || '0.00'}
+                      </div>
+                    </div>
+                    
+                    <div className="booking-card-body">
+                      <div className="booking-info-row">
+                        <span className="label">📞 Phone:</span>
+                        <span className="value">{booking.customer?.phone_number || 'N/A'}</span>
+                      </div>
+                      <div className="booking-info-row">
+                        <span className="label">📝 Description:</span>
+                        <span className="value">{booking.description || 'No description'}</span>
+                      </div>
+                      <div className="booking-info-row">
+                        <span className="label">📅 Start Date:</span>
+                        <span className="value">{formatDate(booking.start_date)}</span>
+                      </div>
+                      <div className="booking-info-row">
+                        <span className="label">✅ Status:</span>
+                        <span className="status-badge status-accepted">{booking.status}</span>
+                      </div>
+                    </div>
+
+                    {booking.status === 'Accepted' && (
+                      <div className="booking-card-footer">
+                        <button
+                          className="btn-mark-completed"
+                          onClick={() => handleMarkAsCompleted(booking._id)}
+                          disabled={completingJobId === booking._id}
+                        >
+                          {completingJobId === booking._id ? '⏳ Processing...' : '✓ Mark as Completed'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Legacy Bookings Section */}
+        <div className="bookings-section legacy-bookings">
+          <div className="section-header">
+            <h2>📋 My Bookings (Legacy)</h2>
             <div className="filter-buttons">
               <button 
                 className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
