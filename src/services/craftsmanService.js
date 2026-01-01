@@ -125,6 +125,139 @@ export const getArtisanProfile = async () => {
 };
 
 /**
+ * Update artisan profile (authenticated endpoint)
+ * Requires valid JWT token in Authorization header
+ * The backend determines which artisan to update from the token
+ * @param {Object} updateData - Data to update
+ * @param {string} updateData.name - Artisan name
+ * @param {string} updateData.phone_number - Phone number
+ * @param {string} updateData.location - Location/city
+ * @param {string} updateData.craftType - Type of craft
+ * @param {string} updateData.description - Profile description
+ * @param {Array<string>} updateData.portfolioImages - Array of portfolio image URLs
+ * @returns {Promise<Object>} Updated artisan profile data
+ */
+export const updateArtisanProfile = async (updateData) => {
+  try {
+    console.log('📝 Updating artisan profile...');
+    console.log('📝 Update data:', updateData);
+    
+    // Token is automatically included by the put() helper from localStorage
+    // Backend uses token to identify which artisan to update
+    const response = await put('/artisans/profile', updateData);
+    
+    console.log('✅ Artisan profile updated successfully:', {
+      _id: response._id,
+      name: response.name,
+      email: response.email
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to update artisan profile');
+    console.error('❌ Error Status:', error.status || 'Unknown');
+    console.error('❌ Error Message:', error.message);
+    console.error('❌ Error Response Data:', error.data);
+    
+    throw new Error(parseApiError(error));
+  }
+};
+
+/**
+ * Upload artisan profile picture (authenticated endpoint)
+ * Requires valid JWT token in Authorization header
+ * @param {File} imageFile - The image file to upload
+ * @returns {Promise<Object>} Response with profilePicture path
+ */
+export const uploadProfilePicture = async (imageFile) => {
+  try {
+    console.log('📸 Uploading profile picture...');
+    console.log('📸 File:', imageFile.name, imageFile.type, imageFile.size);
+    
+    // Create FormData and append the image file
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    
+    // Get token
+    const token = localStorage.getItem('token');
+    
+    // Get API base URL from environment or use default
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const url = `${baseUrl}/artisans/profile-picture`;
+    
+    console.log('📸 Upload URL:', url);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to upload profile picture');
+    }
+    
+    console.log('✅ Profile picture uploaded successfully:', data);
+    console.log('📸 Profile picture path:', data.profilePicture);
+    return data;
+  } catch (error) {
+    console.error('❌ Failed to upload profile picture:', error);
+    throw new Error(error.message || 'Failed to upload profile picture');
+  }
+};
+
+/**
+ * Upload portfolio image (authenticated endpoint)
+ * Requires valid JWT token in Authorization header
+ * @param {File} imageFile - The image file to upload
+ * @returns {Promise<Object>} Response with portfolioImages array
+ */
+export const uploadPortfolioImage = async (imageFile) => {
+  try {
+    console.log('🎨 Uploading portfolio image...');
+    console.log('🎨 File:', imageFile.name, imageFile.type, imageFile.size);
+    
+    // Create FormData and append the image file
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    
+    // Get token
+    const token = localStorage.getItem('token');
+    
+    // Get API base URL from environment or use default
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const url = `${baseUrl}/artisans/upload-portfolio`;
+    
+    console.log('🎨 Upload URL:', url);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to upload portfolio image');
+    }
+    
+    console.log('✅ Portfolio image uploaded successfully:', data);
+    console.log('🎨 Portfolio images:', data.portfolioImages);
+    return data;
+  } catch (error) {
+    console.error('❌ Failed to upload portfolio image:', error);
+    throw new Error(error.message || 'Failed to upload portfolio image');
+  }
+};
+
+/**
  * Get craftsman profile
  * @param {string} craftsmanId - Craftsman ID
  * @returns {Promise<Object>} Craftsman profile data

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getCraftsmanProfile } from '../services/craftsmanService';
 import { createReservation } from '../services/customerService';
+import { get } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import Loading from '../components/Loading';
 import '../styles/CraftsmanProfile.css';
@@ -23,6 +24,8 @@ const CraftsmanProfile = () => {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   useEffect(() => {
     // If we already have artisan data from navigation state, don't fetch
@@ -63,6 +66,37 @@ const CraftsmanProfile = () => {
       fetchCraftsmanProfile();
     }
   }, [id, location.state]);
+
+  // Fetch reviews for this artisan
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!craftsman || !craftsman._id) return;
+      
+      try {
+        setReviewsLoading(true);
+        console.log('📝 Fetching reviews for artisan:', craftsman._id);
+        const data = await get(`/reviews/artisan/${craftsman._id}`);
+        console.log('✅ Reviews fetched:', data);
+        
+        if (Array.isArray(data)) {
+          setReviews(data);
+        } else if (data && Array.isArray(data.reviews)) {
+          setReviews(data.reviews);
+        } else {
+          setReviews([]);
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch reviews:', err);
+        setReviews([]);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    if (craftsman) {
+      fetchReviews();
+    }
+  }, [craftsman]);
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
@@ -115,6 +149,27 @@ const CraftsmanProfile = () => {
     setBookingSuccess(false);
   };
 
+  const formatReviewDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const renderStars = (rating) => {
+    return (
+      <div style={{ display: 'flex', gap: '0.25rem', fontSize: '1.2rem' }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span key={star} style={{ color: star <= rating ? '#f39c12' : '#ddd' }}>
+            ★
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   if (loading) {
     return <Loading />;
   }
@@ -148,9 +203,19 @@ const CraftsmanProfile = () => {
           <div className="profile-hero">
             <div className="profile-image-container">
               <img 
-                src={craftsman.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(craftsman.name)}&background=3498db&color=fff&size=200`} 
+                src={
+                  craftsman.profilePicture
+                    ? (craftsman.profilePicture.startsWith('http') 
+                        ? craftsman.profilePicture 
+                        : `http://localhost:5000${craftsman.profilePicture}`)
+                    : craftsman.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(craftsman.name)}&background=3498db&color=fff&size=200`
+                }
                 alt={craftsman.name}
                 className="profile-image"
+                onError={(e) => {
+                  console.error('❌ Failed to load profile picture:', e.target.src);
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(craftsman.name)}&background=3498db&color=fff&size=200`;
+                }}
               />
               {craftsman.availability && (
                 <span className="availability-badge">Available</span>
@@ -238,6 +303,63 @@ const CraftsmanProfile = () => {
             </div>
           </div>
         )}
+
+        {/* Reviews Section */}
+        <div className="profile-section">
+          <h2>⭐ Customer Reviews ({reviews.length})</h2>
+          {reviewsLoading ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <p>Loading reviews...</p>
+            </div>
+          ) : reviews.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {reviews.map((review) => (
+                <div 
+                  key={review._id} 
+                  style={{
+                    background: '#f8f9fa',
+                    padding: '1.5rem',
+                    borderRadius: '12px',
+                    border: '1px solid #dee2e6'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                        <strong style={{ fontSize: '1.1rem', color: '#2c3e50' }}>
+                          {review.customer?.name || 'Customer'}
+                        </strong>
+                        {renderStars(review.stars_number)}
+                      </div>
+                      <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: 0 }}>
+                        {formatReviewDate(review.review_date)}
+                      </p>
+                    </div>
+                  </div>
+                  <p style={{ 
+                    color: '#2c3e50', 
+                    lineHeight: '1.6', 
+                    margin: 0,
+                    fontSize: '1rem'
+                  }}>
+                    {review.comment}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              textAlign: 'center',
+              padding: '3rem 1rem',
+              background: '#f8f9fa',
+              borderRadius: '12px'
+            }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💬</div>
+              <h3 style={{ color: '#2c3e50', marginBottom: '0.5rem' }}>No reviews yet</h3>
+              <p style={{ color: '#7f8c8d', margin: 0 }}>Be the first to review this artisan!</p>
+            </div>
+          )}
+        </div>
 
         {/* Contact Section */}
         <div className="profile-section">

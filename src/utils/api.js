@@ -126,6 +126,17 @@ export const put = (endpoint, data, options = {}) => {
 };
 
 /**
+ * PATCH request helper
+ */
+export const patch = (endpoint, data, options = {}) => {
+  return apiRequest(endpoint, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+    ...options,
+  });
+};
+
+/**
  * DELETE request helper
  */
 export const del = (endpoint, options = {}) => {

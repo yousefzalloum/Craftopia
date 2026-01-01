@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getArtisanProfile } from '../services/craftsmanService';
+import { getArtisanProfile, updateArtisanProfile, uploadProfilePicture, uploadPortfolioImage } from '../services/craftsmanService';
 import { get } from '../utils/api';
 import Loading from '../components/Loading';
 import '../styles/CraftsmanProfile.css';
@@ -18,6 +18,29 @@ const ArtisanProfilePage = () => {
   const [error, setError] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  
+  // Edit profile states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    phone_number: '',
+    location: '',
+    craftType: '',
+    description: ''
+  });
+  
+  // Portfolio upload states
+  const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
+  const [portfolioFile, setPortfolioFile] = useState(null);
+  const [portfolioPreview, setPortfolioPreview] = useState(null);
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
+  const [portfolioError, setPortfolioError] = useState(null);
+  const [portfolioSuccess, setPortfolioSuccess] = useState(null);
 
   useEffect(() => {
     // Check authentication
@@ -140,21 +163,246 @@ const ArtisanProfilePage = () => {
     );
   };
 
+  // Open edit modal and pre-fill form with current data
+  const handleOpenEditModal = () => {
+    if (profileData) {
+      setFormData({
+        name: profileData.name || '',
+        phone_number: profileData.phone_number || '',
+        location: profileData.location || '',
+        craftType: profileData.craftType || '',
+        description: profileData.description || ''
+      });
+      setProfilePictureFile(null);
+      setProfilePicturePreview(null);
+      setIsEditModalOpen(true);
+      setEditError(null);
+      setSuccessMessage(null);
+    }
+  };
+
+  // Close edit modal
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditError(null);
+    setSuccessMessage(null);
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle profile picture file selection
+  const handleProfilePictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setEditError('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setEditError('Image size must be less than 5MB');
+        return;
+      }
+      
+      console.log('📸 Profile picture selected:', file.name);
+      setProfilePictureFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicturePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      setEditError(null);
+    }
+  };
+
+  // Handle form submission
+  const handleSubmitEdit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setEditLoading(true);
+      setEditError(null);
+      setSuccessMessage(null);
+      
+      console.log('📝 Submitting profile update:', formData);
+      
+      // Upload profile picture first if selected
+      if (profilePictureFile) {
+        console.log('📸 Uploading profile picture...');
+        try {
+          await uploadProfilePicture(profilePictureFile);
+          console.log('✅ Profile picture uploaded');
+        } catch (uploadError) {
+          console.warn('⚠️ Profile picture upload failed:', uploadError.message);
+          // Continue with other updates even if image upload fails
+        }
+      }
+      
+      // Send update request - backend uses Bearer token to identify artisan
+      await updateArtisanProfile(formData);
+      
+      console.log('✅ Profile update request successful');
+      
+      // Refetch the complete profile to ensure all fields are present
+      const refreshedProfile = await getArtisanProfile();
+      console.log('✅ Refreshed profile data:', refreshedProfile);
+      console.log('📸 Profile picture field:', refreshedProfile.profilePicture);
+      console.log('📸 Full image URL will be:', refreshedProfile.profilePicture ? `${window.location.origin}${refreshedProfile.profilePicture}` : 'No profile picture');
+      
+      // Update local profile data with complete data
+      setProfileData(refreshedProfile);
+      
+      // Clear file input
+      setProfilePictureFile(null);
+      setProfilePicturePreview(null);
+      
+      // Show success message
+      setSuccessMessage('Profile updated successfully!');
+      
+      // Close modal after 1.5 seconds
+      setTimeout(() => {
+        setIsEditModalOpen(false);
+        setSuccessMessage(null);
+      }, 1500);
+      
+    } catch (err) {
+      console.error('❌ Failed to update profile:', err);
+      setEditError(err.message || 'Failed to update profile');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // Open portfolio upload modal
+  const handleOpenPortfolioModal = () => {
+    setIsPortfolioModalOpen(true);
+    setPortfolioFile(null);
+    setPortfolioPreview(null);
+    setPortfolioError(null);
+    setPortfolioSuccess(null);
+  };
+
+  // Close portfolio upload modal
+  const handleClosePortfolioModal = () => {
+    setIsPortfolioModalOpen(false);
+    setPortfolioFile(null);
+    setPortfolioPreview(null);
+    setPortfolioError(null);
+    setPortfolioSuccess(null);
+  };
+
+  // Handle portfolio file selection
+  const handlePortfolioFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setPortfolioError('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setPortfolioError('Image size must be less than 5MB');
+        return;
+      }
+      
+      console.log('🎨 Portfolio image selected:', file.name);
+      setPortfolioFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPortfolioPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      setPortfolioError(null);
+    }
+  };
+
+  // Handle portfolio upload
+  const handlePortfolioUpload = async () => {
+    if (!portfolioFile) {
+      setPortfolioError('Please select an image first');
+      return;
+    }
+
+    try {
+      setPortfolioLoading(true);
+      setPortfolioError(null);
+      
+      console.log('🎨 Uploading portfolio image...');
+      const response = await uploadPortfolioImage(portfolioFile);
+      
+      console.log('✅ Portfolio upload successful:', response);
+      
+      // Refresh profile to get updated portfolio
+      const refreshedProfile = await getArtisanProfile();
+      setProfileData(refreshedProfile);
+      
+      setPortfolioSuccess('Portfolio image added successfully!');
+      
+      // Close modal after 1.5 seconds
+      setTimeout(() => {
+        handleClosePortfolioModal();
+      }, 1500);
+      
+    } catch (err) {
+      console.error('❌ Failed to upload portfolio image:', err);
+      setPortfolioError(err.message || 'Failed to upload portfolio image');
+    } finally {
+      setPortfolioLoading(false);
+    }
+  };
+
   return (
     <div className="craftsman-profile-page">
       <div className="container">
         {/* Header Section */}
         <div className="profile-header">
-          <button onClick={() => navigate('/craftsman-dashboard')} className="btn-back">
-            ← Back to Dashboard
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button onClick={() => navigate('/craftsman-dashboard')} className="btn-back">
+              ← Back to Dashboard
+            </button>
+            <button onClick={handleOpenEditModal} className="btn-edit-profile">
+              ✏️ Edit Profile
+            </button>
+          </div>
+          
+          {/* Success Message */}
+          {successMessage && (
+            <div className="success-banner">
+              ✅ {successMessage}
+            </div>
+          )}
           
           <div className="profile-hero">
             <div className="profile-image-container">
               <img 
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=3498db&color=fff&size=200`}
+                src={
+                  profileData.profilePicture
+                    ? (profileData.profilePicture.startsWith('http') 
+                        ? profileData.profilePicture 
+                        : `http://localhost:5000${profileData.profilePicture}`)
+                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=3498db&color=fff&size=200`
+                }
                 alt={profileData.name}
                 className="profile-image"
+                onError={(e) => {
+                  console.error('❌ Failed to load profile picture:', e.target.src);
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=3498db&color=fff&size=200`;
+                }}
               />
               <span className="availability-badge">Active</span>
             </div>
@@ -224,16 +472,40 @@ const ArtisanProfilePage = () => {
 
         {/* Portfolio Section */}
         <div className="profile-section">
-          <h2>🎨 Portfolio</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2>🎨 Portfolio</h2>
+            <button 
+              onClick={handleOpenPortfolioModal}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#27ae60',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}
+            >
+              + Add Image
+            </button>
+          </div>
           {profileData.portfolioImages && profileData.portfolioImages.length > 0 ? (
             <div className="portfolio-grid">
               {profileData.portfolioImages.map((imageUrl, index) => (
                 <div key={index} className="portfolio-item">
                   <div className="portfolio-image">
                     <img 
-                      src={imageUrl} 
+                      src={
+                        imageUrl.startsWith('http') 
+                          ? imageUrl 
+                          : `http://localhost:5000${imageUrl}`
+                      }
                       alt={`Portfolio ${index + 1}`}
-                      onError={(e) => e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found'}
+                      onError={(e) => {
+                        console.error('❌ Failed to load portfolio image:', e.target.src);
+                        e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                      }}
                     />
                   </div>
                 </div>
@@ -323,6 +595,223 @@ const ArtisanProfilePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditModalOpen && (
+        <div className="modal-overlay" onClick={handleCloseEditModal}>
+          <div className="modal-content edit-profile-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>✏️ Edit Profile</h2>
+              <button onClick={handleCloseEditModal} className="btn-close-modal">
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmitEdit} className="edit-profile-form">
+              {editError && (
+                <div className="error-message">
+                  ❌ {editError}
+                </div>
+              )}
+              
+              {successMessage && (
+                <div className="success-message">
+                  ✅ {successMessage}
+                </div>
+              )}
+              
+              <div className="form-group">
+                <label htmlFor="profilePicture">Profile Picture</label>
+                <input
+                  type="file"
+                  id="profilePicture"
+                  accept="image/*"
+                  onChange={handleProfilePictureChange}
+                />
+                {profilePicturePreview && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <img 
+                      src={profilePicturePreview} 
+                      alt="Preview" 
+                      style={{ 
+                        width: '150px', 
+                        height: '150px', 
+                        objectFit: 'cover', 
+                        borderRadius: '50%',
+                        border: '3px solid #667eea'
+                      }} 
+                    />
+                  </div>
+                )}
+                <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '0.5rem', display: 'block' }}>
+                  Upload an image file (max 5MB)
+                </small>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="name">Name *</label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Your full name"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="phone_number">Phone Number *</label>
+                <input
+                  type="tel"
+                  id="phone_number"
+                  name="phone_number"
+                  value={formData.phone_number}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Your phone number"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="location">Location *</label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Your city or location"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="craftType">Craft Type *</label>
+                <input
+                  type="text"
+                  id="craftType"
+                  name="craftType"
+                  value={formData.craftType}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="e.g., Electrician, Plumber, Carpenter"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="description">Description</label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows="4"
+                  placeholder="Tell customers about your skills and experience"
+                ></textarea>
+              </div>
+              
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  className="btn-cancel"
+                  disabled={editLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-save"
+                  disabled={editLoading}
+                >
+                  {editLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Portfolio Upload Modal */}
+      {isPortfolioModalOpen && (
+        <div className="modal-overlay" onClick={handleClosePortfolioModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2>🎨 Add Portfolio Image</h2>
+              <button onClick={handleClosePortfolioModal} className="btn-close-modal">
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ padding: '1.5rem' }}>
+              {portfolioError && (
+                <div className="error-message" style={{ marginBottom: '1rem' }}>
+                  ❌ {portfolioError}
+                </div>
+              )}
+              
+              {portfolioSuccess && (
+                <div className="success-message" style={{ marginBottom: '1rem' }}>
+                  ✅ {portfolioSuccess}
+                </div>
+              )}
+              
+              <div className="form-group">
+                <label htmlFor="portfolioImage">Select Image</label>
+                <input
+                  type="file"
+                  id="portfolioImage"
+                  accept="image/*"
+                  onChange={handlePortfolioFileChange}
+                  disabled={portfolioLoading}
+                />
+                {portfolioPreview && (
+                  <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                    <img 
+                      src={portfolioPreview} 
+                      alt="Preview" 
+                      style={{ 
+                        maxWidth: '100%',
+                        maxHeight: '300px',
+                        borderRadius: '8px',
+                        border: '2px solid #667eea'
+                      }} 
+                    />
+                  </div>
+                )}
+                <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '0.5rem', display: 'block' }}>
+                  Upload an image file (max 5MB)
+                </small>
+              </div>
+              
+              <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
+                <button
+                  type="button"
+                  onClick={handleClosePortfolioModal}
+                  className="btn-cancel"
+                  disabled={portfolioLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePortfolioUpload}
+                  className="btn-save"
+                  disabled={portfolioLoading || !portfolioFile}
+                  style={{
+                    opacity: (!portfolioFile || portfolioLoading) ? 0.6 : 1,
+                    cursor: (!portfolioFile || portfolioLoading) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {portfolioLoading ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

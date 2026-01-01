@@ -113,23 +113,84 @@ export const getCustomerProfile = async () => {
 };
 
 /**
- * Update customer profile
- * @param {string} customerId - Customer ID
+ * Update customer profile (authenticated endpoint)
+ * Requires valid JWT token in Authorization header
+ * The backend determines which customer to update from the token
  * @param {Object} updateData - Data to update
- * @returns {Promise<Object>} Updated customer data
+ * @param {string} updateData.name - Customer name
+ * @param {string} updateData.phone_number - Phone number
+ * @returns {Promise<Object>} Updated customer profile data
  */
-export const updateCustomerProfile = async (customerId, updateData) => {
+export const updateCustomerProfile = async (updateData) => {
   try {
-    const response = await put(`/customers/${customerId}`, updateData);
+    console.log('📝 Updating customer profile...');
+    console.log('📝 Update data:', updateData);
     
-    // Update local storage if successful
-    const currentUser = JSON.parse(localStorage.getItem('craftopia_current_user') || '{}');
-    const updatedUser = { ...currentUser, ...updateData };
-    localStorage.setItem('craftopia_current_user', JSON.stringify(updatedUser));
+    // Token is automatically included by the put() helper from localStorage
+    // Backend uses token to identify which customer to update
+    const response = await put('/customers/profile', updateData);
+    
+    console.log('✅ Customer profile updated successfully:', {
+      _id: response._id,
+      name: response.name,
+      email: response.email
+    });
     
     return response;
   } catch (error) {
+    console.error('❌ Failed to update customer profile');
+    console.error('❌ Error Status:', error.status || 'Unknown');
+    console.error('❌ Error Message:', error.message);
+    console.error('❌ Error Response Data:', error.data);
+    
     throw new Error(parseApiError(error));
+  }
+};
+
+/**
+ * Upload customer profile picture (authenticated endpoint)
+ * Requires valid JWT token in Authorization header
+ * @param {File} imageFile - The image file to upload
+ * @returns {Promise<Object>} Response with profilePicture path
+ */
+export const uploadCustomerProfilePicture = async (imageFile) => {
+  try {
+    console.log('📸 Uploading customer profile picture...');
+    console.log('📸 File:', imageFile.name, imageFile.type, imageFile.size);
+    
+    // Create FormData and append the image file
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    
+    // Get token
+    const token = localStorage.getItem('token');
+    
+    // Get API base URL from environment or use default
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const url = `${baseUrl}/customers/profile-picture`;
+    
+    console.log('📸 Upload URL:', url);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to upload profile picture');
+    }
+    
+    console.log('✅ Customer profile picture uploaded successfully:', data);
+    console.log('📸 Profile picture path:', data.profilePicture);
+    return data;
+  } catch (error) {
+    console.error('❌ Failed to upload customer profile picture:', error);
+    throw new Error(error.message || 'Failed to upload profile picture');
   }
 };
 

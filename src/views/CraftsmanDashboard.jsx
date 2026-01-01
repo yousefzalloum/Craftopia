@@ -22,13 +22,6 @@ const CraftsmanDashboard = () => {
   const [bookings, setBookings] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [showTimeSettings, setShowTimeSettings] = useState(false);
-  const [showPortfolioForm, setShowPortfolioForm] = useState(false);
-  const [portfolio, setPortfolio] = useState([]);
-  const [newWork, setNewWork] = useState({
-    title: '',
-    description: '',
-    imageUrl: ''
-  });
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   
   // All possible time slots
@@ -56,7 +49,6 @@ const CraftsmanDashboard = () => {
       if (profile) {
         console.log('📦 Using cached profile from AuthContext');
         setCraftsman(profile);
-        setPortfolio(profile.portfolioImages || []);
         setSelectedTimes(profile.availableTimes || []);
         return;
       }
@@ -72,7 +64,6 @@ const CraftsmanDashboard = () => {
         
         // Set local state
         setCraftsman(apiProfile);
-        setPortfolio(apiProfile.portfolioImages || []);
         setSelectedTimes(apiProfile.availableTimes || []);
       } catch (error) {
         console.error('⚠️ Failed to fetch profile from API:', error.message);
@@ -81,7 +72,6 @@ const CraftsmanDashboard = () => {
         if (demoData) {
           console.log('Using fallback demo data');
           setCraftsman(demoData);
-          setPortfolio(demoData.portfolio || []);
           setSelectedTimes(demoData.availableTimes || []);
         }
       } finally {
@@ -236,52 +226,6 @@ const CraftsmanDashboard = () => {
     }
   };
 
-  const handleAddWork = () => {
-    if (!newWork.title || !newWork.description || !newWork.imageUrl) {
-      alert('Please fill in all fields');
-      return;
-    }
-
-    const work = {
-      id: Date.now(),
-      ...newWork,
-      createdAt: new Date().toISOString()
-    };
-
-    const updatedPortfolio = [...portfolio, work];
-    setPortfolio(updatedPortfolio);
-
-    // Update in localStorage
-    const storedCraftsmen = JSON.parse(localStorage.getItem('craftopia_craftsmen') || '[]');
-    const index = storedCraftsmen.findIndex(c => c.id === currentUser.id);
-    if (index !== -1) {
-      storedCraftsmen[index].portfolio = updatedPortfolio;
-      localStorage.setItem('craftopia_craftsmen', JSON.stringify(storedCraftsmen));
-    }
-
-    // Reset form
-    setNewWork({ title: '', description: '', imageUrl: '' });
-    setShowPortfolioForm(false);
-    alert('✅ Work added to portfolio!');
-  };
-
-  const handleDeleteWork = (workId) => {
-    if (window.confirm('Are you sure you want to delete this work?')) {
-      const updatedPortfolio = portfolio.filter(w => w.id !== workId);
-      setPortfolio(updatedPortfolio);
-
-      // Update in localStorage
-      const storedCraftsmen = JSON.parse(localStorage.getItem('craftopia_craftsmen') || '[]');
-      const index = storedCraftsmen.findIndex(c => c.id === currentUser.id);
-      if (index !== -1) {
-        storedCraftsmen[index].portfolio = updatedPortfolio;
-        localStorage.setItem('craftopia_craftsmen', JSON.stringify(storedCraftsmen));
-      }
-
-      alert('Work deleted from portfolio');
-    }
-  };
-
   const getReservationWithCraft = (reservation) => {
     const craft = CraftController.getCraft(reservation.craftId);
     return { reservation, craft };
@@ -367,86 +311,6 @@ const CraftsmanDashboard = () => {
                 return <p className="no-times">No available times</p>;
               }
             })()}
-          </div>
-        </div>
-
-        {/* Portfolio Section */}
-        <div className="portfolio-section">
-          <div className="section-header">
-            <h2>🎨 My Portfolio</h2>
-            <button 
-              className="btn-add-work"
-              onClick={() => setShowPortfolioForm(!showPortfolioForm)}
-            >
-              {showPortfolioForm ? '✕ Cancel' : '+ Add Work'}
-            </button>
-          </div>
-
-          {showPortfolioForm && (
-            <div className="portfolio-form">
-              <h3>Add New Work</h3>
-              <div className="form-group">
-                <label>Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Custom Metal Gate"
-                  value={newWork.title}
-                  onChange={(e) => setNewWork({...newWork, title: e.target.value})}
-                />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  placeholder="Describe your work..."
-                  rows="3"
-                  value={newWork.description}
-                  onChange={(e) => setNewWork({...newWork, description: e.target.value})}
-                />
-              </div>
-              <div className="form-group">
-                <label>Image URL</label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={newWork.imageUrl}
-                  onChange={(e) => setNewWork({...newWork, imageUrl: e.target.value})}
-                />
-                <small>Enter a valid image URL from the web</small>
-              </div>
-              <div className="form-actions">
-                <button className="btn-submit-work" onClick={handleAddWork}>
-                  Save Work
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="portfolio-grid">
-            {portfolio.length > 0 ? (
-              portfolio.map((work) => (
-                <div key={work.id} className="portfolio-item">
-                  <div className="portfolio-image">
-                    <img src={work.imageUrl} alt={work.title} onError={(e) => e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found'} />
-                  </div>
-                  <div className="portfolio-content">
-                    <h3>{work.title}</h3>
-                    <p>{work.description}</p>
-                    <button 
-                      className="btn-delete-work"
-                      onClick={() => handleDeleteWork(work.id)}
-                    >
-                      🗑️ Delete
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="no-portfolio">
-                <div className="no-portfolio-icon">🖼️</div>
-                <h3>No work in portfolio yet</h3>
-                <p>Showcase your best work to attract more clients!</p>
-              </div>
-            )}
           </div>
         </div>
 
