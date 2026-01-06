@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCraftsmanProfile } from '../services/craftsmanService';
+import { getCraftsmanProfile, getArtisanAvailability } from '../services/craftsmanService';
 import { get } from '../utils/api';
 import Loading from '../components/Loading';
 import '../styles/CraftsmanProfile.css';
@@ -13,6 +13,8 @@ const ArtisanDetailsPage = () => {
   const [error, setError] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [availability, setAvailability] = useState([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   useEffect(() => {
     const fetchArtisanDetails = async () => {
@@ -85,6 +87,35 @@ const ArtisanDetailsPage = () => {
 
     if (id) {
       fetchReviews();
+    }
+  }, [id]);
+
+  // Fetch availability for this artisan
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!id) return;
+      
+      try {
+        setAvailabilityLoading(true);
+        console.log('📅 Fetching availability for artisan:', id);
+        const data = await getArtisanAvailability(id);
+        console.log('✅ Availability fetched:', data);
+        
+        if (Array.isArray(data)) {
+          setAvailability(data);
+        } else {
+          setAvailability([]);
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch availability:', err);
+        setAvailability([]);
+      } finally {
+        setAvailabilityLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchAvailability();
     }
   }, [id]);
 
@@ -239,6 +270,34 @@ const ArtisanDetailsPage = () => {
           </div>
         </div>
 
+        {/* Availability Section */}
+        <div className="profile-section">
+          <h2>📅 Availability Schedule</h2>
+          {availabilityLoading ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <p>Loading availability...</p>
+            </div>
+          ) : availability.length > 0 ? (
+            <div className="availability-grid">
+              {availability.map((slot) => (
+                <div key={slot._id} className="availability-card">
+                  <div className="availability-day">{slot.day}</div>
+                  <div className="availability-time">
+                    <span className="time-label">⏰</span>
+                    <span>{slot.start_time} - {slot.end_time}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon">📅</div>
+              <h3>No availability set</h3>
+              <p>This artisan hasn't set their working hours yet.</p>
+            </div>
+          )}
+        </div>
+
         {/* Portfolio Section */}
         <div className="profile-section">
           <h2>🎨 Portfolio</h2>
@@ -248,9 +307,16 @@ const ArtisanDetailsPage = () => {
                 <div key={index} className="portfolio-item">
                   <div className="portfolio-image">
                     <img 
-                      src={imageUrl} 
+                      src={
+                        imageUrl.startsWith('http') 
+                          ? imageUrl 
+                          : `http://localhost:5000${imageUrl}`
+                      }
                       alt={`Portfolio ${index + 1}`}
-                      onError={(e) => e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found'}
+                      onError={(e) => {
+                        console.error('❌ Failed to load portfolio image:', e.target.src);
+                        e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                      }}
                     />
                   </div>
                 </div>

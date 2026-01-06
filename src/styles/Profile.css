@@ -221,7 +221,7 @@
   flex-direction: column;
   gap: var(--spacing-xs);
   padding: var(--spacing-md);
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  background: linear-gradient(135deg, #E8E7EA, #AFAEB1);
   border-radius: var(--radius-md);
   border-left: 4px solid var(--secondary-color);
   transition: var(--transition);
@@ -279,7 +279,7 @@
 
 .info-item.compact .info-value {
   font-size: 0.9rem;
-  color: #2c3e50;
+  color: var(--primary-color);
 }
 
 /* Compact Profile Section */
@@ -414,15 +414,15 @@
 }
 
 .stat-card.pending {
-  background: linear-gradient(135deg, #f39c12, #e67e22);
+  background: linear-gradient(135deg, var(--warning-color), var(--secondary-color));
 }
 
 .stat-card.confirmed {
-  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  background: linear-gradient(135deg, var(--secondary-color), #2c3e50);
 }
 
 .stat-card.completed {
-  background: linear-gradient(135deg, #8e44ad, #9b59b6);
+  background: linear-gradient(135deg, #2c3e50, #AFAEB1);
 }
 
 .stat-icon {

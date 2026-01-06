@@ -2,7 +2,7 @@
 
 .role-selection-page {
   min-height: calc(100vh - 60px);
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #E8E7EA 0%, #AFAEB1 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,13 +35,13 @@
 .role-logo h1 {
   font-size: 36px;
   margin: 0;
-  color: #2c3e50;
+  color: var(--primary-color);
   font-weight: 700;
 }
 
 .role-header h2 {
   font-size: 32px;
-  color: #2c3e50;
+  color: var(--primary-color);
   margin: 20px 0 10px 0;
 }
 
@@ -84,11 +84,11 @@
 }
 
 .artisan-card::before {
-  background: linear-gradient(90deg, #ff6b6b, #ff8e72);
+  background: linear-gradient(90deg, #AFAEB1, #2c3e50);
 }
 
 .customer-card::before {
-  background: linear-gradient(90deg, #4ecdc4, #44a5a8);
+  background: linear-gradient(90deg, #2c3e50, #34495e);
 }
 
 .role-card:hover {
@@ -109,7 +109,7 @@
 
 .role-card h3 {
   font-size: 24px;
-  color: #2c3e50;
+  color: var(--primary-color);
   margin: 0 0 10px 0;
   font-weight: 600;
 }
@@ -156,22 +156,22 @@
 }
 
 .artisan-button {
-  background: linear-gradient(135deg, #ff6b6b, #ff8e72);
+  background: linear-gradient(135deg, #AFAEB1, #2c3e50);
   color: white;
 }
 
 .artisan-button:hover {
-  background: linear-gradient(135deg, #ff5a5a, #ff7d61);
+  background: linear-gradient(135deg, #9F9EA1, #1f2d38);
   box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
 }
 
 .customer-button {
-  background: linear-gradient(135deg, #4ecdc4, #44a5a8);
+  background: linear-gradient(135deg, #2c3e50, #34495e);
   color: white;
 }
 
 .customer-button:hover {
-  background: linear-gradient(135deg, #3dbbb4, #339898);
+  background: linear-gradient(135deg, #1f2d38, #1a252f);
   box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
 }
 

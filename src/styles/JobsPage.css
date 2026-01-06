@@ -17,13 +17,13 @@
 
 .jobs-header h1 {
   font-size: 2.5rem;
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 0.5rem;
 }
 
 .jobs-header p {
   font-size: 1.1rem;
-  color: #7f8c8d;
+  color: #8F8E91;
 }
 
 /* Filters Section */
@@ -53,18 +53,18 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: #2c3e50;
+  color: var(--primary-color);
 }
 
 .filter-btn:hover {
-  border-color: #3498db;
+  border-color: var(--secondary-color);
   background: #f8f9fa;
 }
 
 .filter-btn.active {
-  background: #3498db;
+  background: var(--secondary-color);
   color: white;
-  border-color: #3498db;
+  border-color: var(--secondary-color);
 }
 
 /* Search Box */
@@ -84,12 +84,12 @@
 }
 
 .search-input:focus {
-  border-color: #3498db;
+  border-color: var(--secondary-color);
   box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 .search-input::placeholder {
-  color: #95a5a6;
+  color: #AFAEB1;
 }
 
 .clear-search {
@@ -97,7 +97,7 @@
   right: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
-  background: #e74c3c;
+  background: #8F8E91;
   color: white;
   border: none;
   border-radius: 50%;
@@ -128,17 +128,17 @@
 }
 
 .error-container h2 {
-  color: #e74c3c;
+  color: #8F8E91;
   margin-bottom: 1rem;
 }
 
 .error-container p {
-  color: #7f8c8d;
+  color: #8F8E91;
   margin-bottom: 1.5rem;
 }
 
 .btn-retry {
-  background: #3498db;
+  background: var(--secondary-color);
   color: white;
   border: none;
   padding: 0.75rem 2rem;
@@ -167,12 +167,12 @@
 }
 
 .no-jobs h2 {
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 0.5rem;
 }
 
 .no-jobs p {
-  color: #7f8c8d;
+  color: #8F8E91;
   font-size: 1.1rem;
 }
 
@@ -192,7 +192,7 @@
 }
 
 .jobs-table thead {
-  background: #34495e;
+  background: var(--dark-bg);
   color: white;
 }
 
@@ -220,23 +220,23 @@
 
 .jobs-table tbody td {
   padding: 1rem;
-  color: #2c3e50;
+  color: var(--primary-color);
   vertical-align: top;
 }
 
 /* Column Specific Styles */
 .customer-name {
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--primary-color);
 }
 
 .customer-email {
-  color: #3498db;
+  color: var(--secondary-color);
   font-size: 0.9rem;
 }
 
 .customer-phone {
-  color: #7f8c8d;
+  color: #8F8E91;
   font-size: 0.9rem;
 }
 
@@ -255,13 +255,13 @@
 
 .job-price {
   font-weight: 600;
-  color: #27ae60;
+  color: var(--secondary-color);
   white-space: nowrap;
 }
 
 .job-created {
   font-size: 0.85rem;
-  color: #95a5a6;
+  color: #AFAEB1;
   white-space: nowrap;
 }
 
@@ -320,7 +320,7 @@
 }
 
 .btn-accept {
-  background: #27ae60;
+  background: var(--secondary-color);
   color: white;
 }
 
@@ -330,7 +330,7 @@
 }
 
 .btn-reject {
-  background: #e74c3c;
+  background: #8F8E91;
   color: white;
 }
 
@@ -346,7 +346,7 @@
 }
 
 .no-action {
-  color: #bdc3c7;
+  color: #AFAEB1;
   font-size: 1.2rem;
 }
 

@@ -1,12 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import Hero from '../components/Hero';
-import CraftCard from '../components/CraftCard';
-import { CraftController } from '../controllers/CraftController';
 import '../styles/Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
-  const featuredCrafts = CraftController.getCrafts().slice(0, 6);
 
   return (
     <div className="home">
@@ -40,30 +37,6 @@ const Home = () => {
               <h3>Verified Artisans</h3>
               <p>All our artisans are verified professionals with years of experience</p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="home-featured">
-        <div className="container">
-          <h2 className="section-title">Featured Crafts</h2>
-          <p className="section-subtitle">
-            Explore our handpicked selection of exceptional industrial crafts
-          </p>
-          
-          <div className="crafts-grid">
-            {featuredCrafts.map((craft) => (
-              <CraftCard key={craft.id} craft={craft} />
-            ))}
-          </div>
-
-          <div className="home-cta">
-            <button 
-              className="btn-primary"
-              onClick={() => navigate('/crafts')}
-            >
-              View All Crafts
-            </button>
           </div>
         </div>
       </section>

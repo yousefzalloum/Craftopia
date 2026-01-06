@@ -215,16 +215,34 @@ export const logoutCustomer = () => {
  */
 export const createReservation = async (reservationData) => {
   try {
-    console.log('📡 Creating reservation:', reservationData);
-    const response = await post('/reservations', {
-      ...reservationData,
-      status: 'New'
-    });
+    console.log('📡 Creating reservation with payload:', JSON.stringify(reservationData, null, 2));
+    const response = await post('/reservations', reservationData);
     console.log('✅ Reservation created:', response);
     return response;
   } catch (error) {
     console.error('❌ Error creating reservation:', error);
-    throw new Error(parseApiError(error));
+    console.error('❌ Error status:', error.status);
+    console.error('❌ Error data:', JSON.stringify(error.data, null, 2));
+    
+    // Extract detailed error message from backend
+    let errorMessage = 'Failed to create reservation';
+    
+    if (error.data) {
+      // Check for detailed backend error first
+      if (error.data.error) {
+        errorMessage = error.data.error;
+      } else if (error.data.message && error.data.message !== 'Booking failed') {
+        errorMessage = error.data.message;
+      } else if (error.data.errors) {
+        // Handle validation errors array
+        const errors = Array.isArray(error.data.errors) 
+          ? error.data.errors.map(e => e.msg || e.message).join(', ')
+          : JSON.stringify(error.data.errors);
+        errorMessage = `Validation error: ${errors}`;
+      }
+    }
+    
+    throw new Error(errorMessage);
   }
 };
 

@@ -1,0 +1,201 @@
+/* Notification Card Component Styles */
+.notification-card {
+  display: flex;
+  gap: 15px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  position: relative;
+  border-left: 4px solid transparent;
+}
+
+.notification-card:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.notification-card.unread {
+  background: #f0f8ff;
+  border-left-color: var(--secondary-color);
+}
+
+.notification-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 50%;
+}
+
+.notification-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.notification-type {
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.notification-type.booking {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.notification-type.review {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.notification-type.payment {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.notification-type.message {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.notification-type.system {
+  background: #eceff1;
+  color: #546e7a;
+}
+
+.notification-time {
+  color: #8F8E91;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.notification-message {
+  color: var(--primary-color);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.btn-mark-read,
+.btn-delete {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-mark-read {
+  background: #2c3e50;
+  color: white;
+}
+
+.btn-mark-read:hover {
+  background: var(--secondary-color);
+  transform: translateY(-1px);
+}
+
+.btn-delete {
+  background: #ecf0f1;
+  color: #8F8E91;
+}
+
+.btn-delete:hover {
+  background: #8F8E91;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.unread-indicator {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 10px;
+  height: 10px;
+  background: var(--secondary-color);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .notification-card {
+    padding: 15px;
+    gap: 12px;
+  }
+
+  .notification-icon {
+    font-size: 2rem;
+    width: 40px;
+    height: 40px;
+  }
+
+  .notification-message {
+    font-size: 0.95rem;
+  }
+
+  .notification-actions {
+    flex-wrap: wrap;
+  }
+
+  .btn-mark-read,
+  .btn-delete {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notification-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .notification-icon {
+    margin: 0 auto;
+  }
+
+  .notification-header {
+    justify-content: center;
+  }
+
+  .notification-actions {
+    justify-content: center;
+  }
+}

@@ -179,7 +179,7 @@
 }
 
 .btn-submit:hover:not(:disabled) {
-  background-color: #d35400;
+  background-color: var(--secondary-color);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }

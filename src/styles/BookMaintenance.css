@@ -2,7 +2,7 @@
 .book-maintenance-page {
   padding: 2rem 0;
   min-height: calc(100vh - 80px);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
 }
 
 .book-maintenance-page .page-header {
@@ -90,7 +90,7 @@
 .btn-submit {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -241,7 +241,7 @@
 
 .btn-view-profile {
   padding: 0.6rem 1.2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
   color: white;
   text-decoration: none;
   border-radius: 6px;

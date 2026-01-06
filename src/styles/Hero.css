@@ -18,7 +18,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(44, 62, 80, 0.7);
+  background: rgba(52, 73, 94, 0.7);
   z-index: 1;
 }
 
@@ -55,9 +55,9 @@
 }
 
 .hero-cta:hover {
-  background-color: #d35400;
+  background-color: #1f2d38;
   transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 25px rgba(52, 73, 94, 0.3);
 }
 
 @media (max-width: 768px) {

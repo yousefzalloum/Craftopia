@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getArtisanProfile, updateArtisanProfile, uploadProfilePicture, uploadPortfolioImage } from '../services/craftsmanService';
+import { getArtisanProfile, updateArtisanProfile, uploadProfilePicture, uploadPortfolioImage, deletePortfolioImage } from '../services/craftsmanService';
 import { get } from '../utils/api';
 import Loading from '../components/Loading';
 import '../styles/CraftsmanProfile.css';
@@ -366,6 +366,30 @@ const ArtisanProfilePage = () => {
     }
   };
 
+  // Handle portfolio image deletion
+  const handleDeletePortfolioImage = async (imageUrl) => {
+    if (!window.confirm('Are you sure you want to delete this portfolio image?')) {
+      return;
+    }
+
+    try {
+      console.log('🗑️ Deleting portfolio image:', imageUrl);
+      const response = await deletePortfolioImage(imageUrl);
+      
+      console.log('✅ Portfolio image deleted:', response);
+      
+      // Update profile data with new portfolio images
+      setProfileData(prev => ({
+        ...prev,
+        portfolioImages: response.portfolioImages
+      }));
+      
+    } catch (err) {
+      console.error('❌ Failed to delete portfolio image:', err);
+      alert(err.message || 'Failed to delete portfolio image');
+    }
+  };
+
   return (
     <div className="craftsman-profile-page">
       <div className="container">
@@ -494,7 +518,7 @@ const ArtisanProfilePage = () => {
             <div className="portfolio-grid">
               {profileData.portfolioImages.map((imageUrl, index) => (
                 <div key={index} className="portfolio-item">
-                  <div className="portfolio-image">
+                  <div className="portfolio-image" style={{ position: 'relative' }}>
                     <img 
                       src={
                         imageUrl.startsWith('http') 
@@ -507,6 +531,38 @@ const ArtisanProfilePage = () => {
                         e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
                       }}
                     />
+                    <button
+                      onClick={() => handleDeletePortfolioImage(imageUrl)}
+                      style={{
+                        position: 'absolute',
+                        top: '0.5rem',
+                        right: '0.5rem',
+                        background: '#e74c3c',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '32px',
+                        height: '32px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.2rem',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = '#c0392b';
+                        e.target.style.transform = 'scale(1.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = '#e74c3c';
+                        e.target.style.transform = 'scale(1)';
+                      }}
+                      title="Delete image"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
               ))}

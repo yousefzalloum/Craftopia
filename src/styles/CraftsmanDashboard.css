@@ -2,7 +2,7 @@
 .craftsman-dashboard {
   padding: 2rem 0;
   min-height: calc(100vh - 80px);
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #E8E7EA 0%, #AFAEB1 100%);
 }
 
 .dashboard-header {
@@ -19,7 +19,7 @@
 
 .craftsman-info h1 {
   margin: 0 0 0.5rem 0;
-  color: #2c3e50;
+  color: var(--primary-color);
   font-size: 2rem;
 }
 
@@ -53,7 +53,7 @@
   display: block;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 0.25rem;
 }
 
@@ -72,7 +72,7 @@
 
 .btn-view-profile {
   padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -135,13 +135,86 @@
 }
 
 .time-settings-panel h3 {
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 0.5rem;
 }
 
 .time-settings-panel p {
   color: #666;
   margin-bottom: 1.5rem;
+}
+
+/* Availability Form Styles */
+.availability-form {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.availability-message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.availability-message.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 2px solid #10b981;
+}
+
+.availability-message.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 2px solid #ef4444;
+}
+
+.divider {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 2rem 0;
+}
+
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .time-slots-grid {
@@ -220,7 +293,7 @@
 }
 
 .current-times h3 {
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 1rem;
 }
 
@@ -257,7 +330,7 @@
 }
 
 .section-header h2 {
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 1rem;
 }
 
@@ -305,7 +378,7 @@
 }
 
 .no-bookings h3 {
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 0.5rem;
 }
 
@@ -375,7 +448,7 @@
 
 .booking-info h3 {
   margin: 0;
-  color: #2c3e50;
+  color: var(--primary-color);
   font-size: 1.2rem;
 }
 
@@ -424,7 +497,7 @@
 }
 
 .booking-details strong {
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-right: 0.5rem;
 }
 
@@ -494,7 +567,7 @@
 
 .btn-add-work {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #2c3e50, #34495e);
   color: white;
   border: none;
   border-radius: 8px;
@@ -519,7 +592,7 @@
 
 .portfolio-form h3 {
   margin: 0 0 1.5rem 0;
-  color: #2c3e50;
+  color: var(--primary-color);
 }
 
 .portfolio-form .form-group {
@@ -529,7 +602,7 @@
 .portfolio-form label {
   display: block;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 0.5rem;
 }
 
@@ -618,7 +691,7 @@
 
 .portfolio-content h3 {
   margin: 0 0 0.75rem 0;
-  color: #2c3e50;
+  color: var(--primary-color);
   font-size: 1.2rem;
 }
 
@@ -682,7 +755,7 @@
 }
 
 .section-description {
-  color: #7f8c8d;
+  color: #8F8E91;
   font-size: 0.95rem;
   margin: 0;
 }
@@ -702,7 +775,7 @@
 }
 
 .accepted-job-card:hover {
-  border-color: #27ae60;
+  border-color: var(--secondary-color);
   box-shadow: 0 4px 12px rgba(39, 174, 96, 0.15);
   transform: translateY(-2px);
 }
@@ -717,13 +790,13 @@
 }
 
 .job-card-header h3 {
-  color: #2c3e50;
+  color: var(--primary-color);
   font-size: 1.1rem;
   margin: 0;
 }
 
 .job-price {
-  background: #27ae60;
+  background: var(--secondary-color);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 20px;
@@ -746,7 +819,7 @@
 
 .customer-info h4,
 .job-details h4 {
-  color: #34495e;
+  color: var(--dark-bg);
   font-size: 0.9rem;
   margin: 0 0 0.75rem 0;
   text-transform: uppercase;
@@ -762,7 +835,7 @@
 
 .customer-info p strong,
 .job-details p strong {
-  color: #2c3e50;
+  color: var(--primary-color);
   display: inline-block;
   min-width: 100px;
 }
@@ -780,12 +853,12 @@
 }
 
 .no-jobs h3 {
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 0.5rem;
 }
 
 .no-jobs p {
-  color: #7f8c8d;
+  color: #8F8E91;
   font-size: 1rem;
 }
 
@@ -802,7 +875,7 @@
 }
 
 .btn-retry {
-  background: #3498db;
+  background: var(--secondary-color);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -832,7 +905,7 @@
 }
 
 .booking-card:hover {
-  border-color: #3498db;
+  border-color: var(--secondary-color);
   box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
   transform: translateY(-2px);
 }
@@ -858,12 +931,12 @@
 
 .customer-name h3 {
   margin: 0;
-  color: #2c3e50;
+  color: var(--primary-color);
   font-size: 1.2rem;
 }
 
 .booking-price {
-  background: #27ae60;
+  background: var(--secondary-color);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 20px;
@@ -885,13 +958,13 @@
 }
 
 .booking-info-row .label {
-  color: #7f8c8d;
+  color: #8F8E91;
   font-weight: 600;
   font-size: 0.9rem;
 }
 
 .booking-info-row .value {
-  color: #2c3e50;
+  color: var(--primary-color);
   font-size: 0.95rem;
   text-align: right;
   max-width: 60%;
@@ -919,12 +992,12 @@
 }
 
 .no-bookings h3 {
-  color: #2c3e50;
+  color: var(--primary-color);
   margin-bottom: 0.5rem;
 }
 
 .no-bookings p {
-  color: #7f8c8d;
+  color: #8F8E91;
   font-size: 1rem;
 }
 
@@ -942,7 +1015,7 @@
 }
 
 .btn-mark-completed {
-  background: #27ae60;
+  background: var(--secondary-color);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;

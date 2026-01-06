@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
   padding: var(--spacing-md);
 }
 
@@ -46,7 +46,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
   padding: var(--spacing-md);
 }
 
@@ -232,7 +232,7 @@
 
 /* Buttons */
 .btn-submit {
-  background: linear-gradient(135deg, var(--secondary-color), #d35400);
+  background: linear-gradient(135deg, var(--secondary-color), var(--secondary-color));
   color: var(--white);
   padding: var(--spacing-md);
   border: none;
@@ -248,7 +248,7 @@
 
 .btn-submit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(230, 126, 34, 0.3);
+  box-shadow: 0 10px 20px rgba(44, 62, 80, 0.3);
 }
 
 .btn-submit:disabled {
@@ -257,7 +257,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--secondary-color), #d35400);
+  background: linear-gradient(135deg, var(--secondary-color), var(--secondary-color));
   color: var(--white);
   padding: var(--spacing-md);
   border: none;
@@ -274,7 +274,7 @@
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(230, 126, 34, 0.3);
+  box-shadow: 0 10px 20px rgba(44, 62, 80, 0.3);
 }
 
 /* Demo Buttons */
@@ -298,7 +298,7 @@
 }
 
 .btn-demo.customer {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #2c3e50, #34495e);
 }
 
 .btn-demo.customer:hover {
@@ -307,12 +307,12 @@
 }
 
 .btn-demo.craftsman {
-  background: linear-gradient(135deg, var(--secondary-color), #d35400);
+  background: linear-gradient(135deg, var(--secondary-color), var(--secondary-color));
 }
 
 .btn-demo.craftsman:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(230, 126, 34, 0.3);
+  box-shadow: 0 8px 16px rgba(44, 62, 80, 0.3);
 }
 
 .old-btn-demo {

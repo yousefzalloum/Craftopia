@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { getCraftsmanProfile } from '../services/craftsmanService';
+import { getCraftsmanProfile, getArtisanAvailability } from '../services/craftsmanService';
 import { createReservation } from '../services/customerService';
 import { get } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +26,9 @@ const CraftsmanProfile = () => {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [availability, setAvailability] = useState([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   useEffect(() => {
     // If we already have artisan data from navigation state, don't fetch
@@ -98,20 +101,111 @@ const CraftsmanProfile = () => {
     }
   }, [craftsman]);
 
+  // Fetch availability for this artisan
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!craftsman || !craftsman._id) return;
+      
+      try {
+        setAvailabilityLoading(true);
+        console.log('📅 Fetching availability for artisan:', craftsman._id);
+        const data = await getArtisanAvailability(craftsman._id);
+        console.log('✅ Availability fetched:', data);
+        
+        if (Array.isArray(data)) {
+          setAvailability(data);
+        } else {
+          setAvailability([]);
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch availability:', err);
+        setAvailability([]);
+      } finally {
+        setAvailabilityLoading(false);
+      }
+    };
+
+    if (craftsman) {
+      fetchAvailability();
+    }
+  }, [craftsman]);
+
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setBookingLoading(true);
     setBookingError(null);
 
     try {
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+      const userRole = localStorage.getItem('role');
+      
+      console.log('🔐 Auth check:', { 
+        hasToken: !!token, 
+        userId, 
+        role: userRole,
+        isLoggedIn,
+        componentRole: role 
+      });
+      
+      if (!token) {
+        setBookingError('You must be logged in to book a service');
+        navigate('/login');
+        return;
+      }
+      
+      if (userRole !== 'customer') {
+        setBookingError('Only customers can book services');
+        setBookingLoading(false);
+        return;
+      }
+
+      // Validate inputs
+      if (!bookingData.description || !bookingData.start_date || !bookingData.total_price) {
+        setBookingError('Please fill in all required fields');
+        setBookingLoading(false);
+        return;
+      }
+
+      // Ensure the date is valid and in the future
+      const startDate = new Date(bookingData.start_date);
+      if (isNaN(startDate.getTime())) {
+        setBookingError('Invalid date format');
+        setBookingLoading(false);
+        return;
+      }
+
+      if (startDate < new Date()) {
+        setBookingError('Start date must be in the future');
+        setBookingLoading(false);
+        return;
+      }
+
+      // Ensure price is a valid number
+      const price = Number(bookingData.total_price);
+      if (isNaN(price) || price <= 0) {
+        setBookingError('Please enter a valid price');
+        setBookingLoading(false);
+        return;
+      }
+
       const reservationPayload = {
-        artisan: id,
-        description: bookingData.description,
-        start_date: new Date(bookingData.start_date).toISOString(),
-        total_price: parseFloat(bookingData.total_price)
+        artisanId: id,
+        description: bookingData.description.trim(),
+        start_date: startDate.toISOString().split('T')[0],
+        total_price: price
       };
 
       console.log('📋 Submitting reservation:', reservationPayload);
+      console.log('📋 Artisan ID:', id);
+      console.log('📋 Payload types:', {
+        artisanId: typeof reservationPayload.artisanId,
+        description: typeof reservationPayload.description,
+        start_date: typeof reservationPayload.start_date,
+        total_price: typeof reservationPayload.total_price
+      });
+      
       const response = await createReservation(reservationPayload);
       console.log('✅ Reservation created successfully:', response);
       
@@ -124,7 +218,27 @@ const CraftsmanProfile = () => {
       }, 2000);
     } catch (err) {
       console.error('❌ Booking error:', err);
-      setBookingError(err.message || 'Failed to create reservation');
+      console.error('❌ Error details:', {
+        message: err.message,
+        status: err.status,
+        data: err.data
+      });
+      
+      // Show more user-friendly error messages
+      let errorMessage = err.message || 'Failed to create reservation. Please try again.';
+      
+      // Check for specific error patterns
+      if (errorMessage.includes('artisan')) {
+        errorMessage = 'Invalid artisan. Please try again.';
+      } else if (errorMessage.includes('authentication') || errorMessage.includes('token')) {
+        errorMessage = 'Please log in again to book a service.';
+      } else if (errorMessage.includes('validation')) {
+        errorMessage = 'Please check all fields and try again.';
+      } else if (errorMessage === 'Booking failed') {
+        errorMessage = 'Booking failed. The backend server returned an error. Please check if the backend is running properly on port 5000.';
+      }
+      
+      setBookingError(errorMessage);
     } finally {
       setBookingLoading(false);
     }
@@ -198,34 +312,50 @@ const CraftsmanProfile = () => {
       <div className="container">
         {/* Header Section */}
         <div className="profile-header">
-          <button onClick={() => navigate(-1)} className="btn-back">← Back</button>
+          <button onClick={() => navigate(-1)} className="btn-back">
+            <span>←</span> Back to Search
+          </button>
           
-          <div className="profile-hero">
-            <div className="profile-image-container">
-              <img 
-                src={
-                  craftsman.profilePicture
-                    ? (craftsman.profilePicture.startsWith('http') 
-                        ? craftsman.profilePicture 
-                        : `http://localhost:5000${craftsman.profilePicture}`)
-                    : craftsman.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(craftsman.name)}&background=3498db&color=fff&size=200`
-                }
-                alt={craftsman.name}
-                className="profile-image"
-                onError={(e) => {
-                  console.error('❌ Failed to load profile picture:', e.target.src);
-                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(craftsman.name)}&background=3498db&color=fff&size=200`;
-                }}
-              />
-              {craftsman.availability && (
-                <span className="availability-badge">Available</span>
-              )}
-            </div>
+          <div className="profile-hero-enhanced">
+            <div className="hero-background"></div>
+            <div className="hero-content">
+              <div className="profile-image-container-enhanced">
+                <div className="image-ring"></div>
+                <img 
+                  src={
+                    craftsman.profilePicture
+                      ? (craftsman.profilePicture.startsWith('http') 
+                          ? craftsman.profilePicture 
+                          : `http://localhost:5000${craftsman.profilePicture}`)
+                      : craftsman.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(craftsman.name)}&background=667eea&color=fff&size=200`
+                  }
+                  alt={craftsman.name}
+                  className="profile-image-enhanced"
+                  onError={(e) => {
+                    console.error('❌ Failed to load profile picture:', e.target.src);
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(craftsman.name)}&background=667eea&color=fff&size=200`;
+                  }}
+                />
+                {craftsman.availability && (
+                  <span className="availability-badge-pulse">
+                    <span className="pulse-dot"></span>
+                    Available Now
+                  </span>
+                )}
+              </div>
 
-            <div className="profile-info">
-              <h1>{craftsman.name}</h1>
-              <p className="profession">{craftsman.craftType}</p>
-              <p className="location">📍 {craftsman.location || 'City not specified'}</p>
+              <div className="profile-info-enhanced">
+                <div className="profile-title-section">
+                  <h1 className="profile-name-enhanced">{craftsman.name}</h1>
+                  <div className="profession-badge">
+                    <span className="badge-icon">🔨</span>
+                    {craftsman.craftType}
+                  </div>
+                </div>
+                <p className="location-enhanced">
+                  <span className="location-icon">📍</span>
+                  {craftsman.location || 'City not specified'}
+                </p>
               
               {/* Book Service Button - Only for logged in customers */}
               {isLoggedIn && role === 'customer' && (
@@ -250,54 +380,84 @@ const CraftsmanProfile = () => {
                 </button>
               )}
               
-              <div className="profile-stats">
-                <div className="stat">
-                  <span className="stat-icon">⭐</span>
-                  <div>
-                    <strong>{craftsman.averageRating || 'N/A'}</strong>
-                    <small>Rating</small>
+              <div className="profile-stats-enhanced">
+                <div className="stat-card">
+                  <div className="stat-icon-enhanced rating">⭐</div>
+                  <div className="stat-content">
+                    <div className="stat-value">{craftsman.averageRating?.toFixed(1) || 'N/A'}</div>
+                    <div className="stat-label">Rating</div>
                   </div>
                 </div>
-                <div className="stat">
-                  <span className="stat-icon">📧</span>
-                  <div>
-                    <strong>{craftsman.email}</strong>
-                    <small>Email</small>
+                <div className="stat-card">
+                  <div className="stat-icon-enhanced location">📍</div>
+                  <div className="stat-content">
+                    <div className="stat-value-small">{craftsman.location}</div>
+                    <div className="stat-label">Location</div>
                   </div>
                 </div>
-                <div className="stat">
-                  <span className="stat-icon">📱</span>
-                  <div>
-                    <strong>{craftsman.phone_number}</strong>
-                    <small>Phone</small>
+                <div className="stat-card">
+                  <div className="stat-icon-enhanced email">📧</div>
+                  <div className="stat-content">
+                    <div className="stat-value-small">{craftsman.email}</div>
+                    <div className="stat-label">Email</div>
                   </div>
                 </div>
-                <div className="stat">
-                  <span className="stat-icon">📅</span>
-                  <div>
-                    <strong>{new Date(craftsman.createdAt).getFullYear()}</strong>
-                    <small>Member Since</small>
+                <div className="stat-card">
+                  <div className="stat-icon-enhanced phone">📱</div>
+                  <div className="stat-content">
+                    <div className="stat-value-small">{craftsman.phone_number}</div>
+                    <div className="stat-label">Phone</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon-enhanced calendar">📅</div>
+                  <div className="stat-content">
+                    <div className="stat-value">{new Date(craftsman.createdAt).getFullYear()}</div>
+                    <div className="stat-label">Member Since</div>
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </div>
 
         {/* About Section */}
-        <div className="profile-section">
-          <h2>About Me</h2>
-          <p className="bio">{craftsman.description || 'No description available'}</p>
+        <div className="profile-section-enhanced">
+          <div className="section-header-enhanced">
+            <span className="section-icon">💬</span>
+            <h2>About Me</h2>
+          </div>
+          <div className="about-content">
+            <p className="bio-enhanced">{craftsman.description || 'No description available yet. This artisan will update their profile soon.'}</p>
+          </div>
         </div>
 
         {/* Portfolio Section */}
         {craftsman.portfolioImages && craftsman.portfolioImages.length > 0 && (
-          <div className="profile-section">
-            <h2>🎨 Portfolio</h2>
-            <div className="portfolio-grid">
+          <div className="profile-section-enhanced">
+            <div className="section-header-enhanced">
+              <span className="section-icon">🎨</span>
+              <h2>Portfolio</h2>
+            </div>
+            <div className="portfolio-grid-enhanced">
               {craftsman.portfolioImages.map((image, index) => (
-                <div key={index} className="portfolio-item">
-                  <img src={image} alt={`Portfolio ${index + 1}`} />
+                <div key={index} className="portfolio-item-enhanced">
+                  <div className="portfolio-overlay">
+                    <span className="portfolio-number">#{index + 1}</span>
+                  </div>
+                  <img 
+                    src={
+                      image.startsWith('http') 
+                        ? image 
+                        : `http://localhost:5000${image}`
+                    }
+                    alt={`Portfolio ${index + 1}`}
+                    onError={(e) => {
+                      console.error('❌ Failed to load portfolio image:', e.target.src);
+                      e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -305,24 +465,26 @@ const CraftsmanProfile = () => {
         )}
 
         {/* Reviews Section */}
-        <div className="profile-section">
-          <h2>⭐ Customer Reviews ({reviews.length})</h2>
+        <div className="profile-section-enhanced">
+          <div className="section-header-enhanced">
+            <span className="section-icon">⭐</span>
+            <h2>Customer Reviews</h2>
+            <span className="reviews-count">({reviews.length})</span>
+          </div>
           {reviewsLoading ? (
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <div className="loading-state">
+              <div className="spinner"></div>
               <p>Loading reviews...</p>
             </div>
           ) : reviews.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {reviews.map((review) => (
-                <div 
-                  key={review._id} 
-                  style={{
-                    background: '#f8f9fa',
-                    padding: '1.5rem',
-                    borderRadius: '12px',
-                    border: '1px solid #dee2e6'
-                  }}
-                >
+            <>
+              <div className="reviews-container">
+                {(showAllReviews ? reviews : reviews.slice(-1)).map((review, index) => (
+                  <div 
+                    key={review._id} 
+                    className="review-card-enhanced"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
@@ -347,6 +509,17 @@ const CraftsmanProfile = () => {
                 </div>
               ))}
             </div>
+            {reviews.length > 1 && (
+              <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                <button 
+                  onClick={() => setShowAllReviews(!showAllReviews)}
+                  className="btn-show-more"
+                >
+                  {showAllReviews ? '← Show Less' : `Show More (${reviews.length - 1} more reviews) →`}
+                </button>
+              </div>
+            )}
+          </>
           ) : (
             <div style={{
               textAlign: 'center',
@@ -361,20 +534,45 @@ const CraftsmanProfile = () => {
           )}
         </div>
 
-        {/* Contact Section */}
-        <div className="profile-section">
-          <h2>📞 Contact Information</h2>
-          <div className="contact-info">
-            <p>
-              <strong>Phone:</strong> {craftsman.phone_number || 'Not provided'}
-            </p>
-            <p>
-              <strong>Email:</strong> {craftsman.email}
-            </p>
-            <p>
-              <strong>Location:</strong> {craftsman.location}
-            </p>
+        {/* Availability Section */}
+        <div className="profile-section-enhanced">
+          <div className="section-header-enhanced">
+            <span className="section-icon">📅</span>
+            <h2>Availability Schedule</h2>
           </div>
+          {availabilityLoading ? (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <p>Loading availability...</p>
+            </div>
+          ) : availability.length > 0 ? (
+            <div className="availability-grid-enhanced">
+              {availability.map((slot, index) => (
+                <div key={slot._id} className="availability-card-enhanced" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <div className="card-shine"></div>
+                  <div className="availability-header">
+                    <span className="day-icon">🗓️</span>
+                    <div className="availability-day-enhanced">{slot.day}</div>
+                  </div>
+                  <div className="availability-divider"></div>
+                  <div className="availability-time-enhanced">
+                    <span className="time-icon">⏰</span>
+                    <div className="time-range">
+                      <span className="time-start">{slot.start_time}</span>
+                      <span className="time-separator">→</span>
+                      <span className="time-end">{slot.end_time}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state-enhanced">
+              <div className="empty-icon-animated">📅</div>
+              <h3>No availability set</h3>
+              <p>This artisan hasn't set their working hours yet. Check back later!</p>
+            </div>
+          )}
         </div>
       </div>
 

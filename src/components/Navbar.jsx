@@ -1,10 +1,35 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import NotificationController from '../controllers/NotificationController';
 import '../styles/Navbar.css';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const { isLoggedIn, user, profile, role, logout } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread count when user is logged in
+  useEffect(() => {
+    // Don't fetch notifications for admin users
+    if (isLoggedIn && role !== 'admin') {
+      fetchUnreadCount();
+      // Poll every 30 seconds for new notifications
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isLoggedIn, role]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const count = await NotificationController.getUnreadCount();
+      setUnreadCount(count);
+    } catch (error) {
+      // Silently fail - don't log to avoid console spam
+      // Backend might be down, just keep count at 0
+      setUnreadCount(0);
+    }
+  };
 
   // Handle logout
   const handleLogout = () => {
@@ -26,11 +51,27 @@ const Navbar = () => {
         </Link>
 
         <ul className="navbar-menu">
-          <li className="navbar-item">
-            <Link to="/" className="navbar-link">Home</Link>
-          </li>
+          {isLoggedIn && role !== 'admin' && (
+            <li className="navbar-item">
+              <Link to="/" className="navbar-link">Home</Link>
+            </li>
+          )}
           
-          {isLoggedIn && role === 'artisan' ? (
+          {isLoggedIn && role === 'admin' ? (
+            // Admin Menu (logged in)
+            <>
+              <li className="navbar-item">
+                <Link to="/admin-dashboard" className="navbar-link navbar-link-primary">
+                  🔨 Admin Dashboard
+                </Link>
+              </li>
+              <li className="navbar-item">
+                <button onClick={handleLogout} className="navbar-link navbar-btn">
+                  🚪 Logout
+                </button>
+              </li>
+            </>
+          ) : isLoggedIn && role === 'artisan' ? (
             // Artisan Menu (logged in)
             <>
               <li className="navbar-item">
@@ -41,6 +82,14 @@ const Navbar = () => {
               <li className="navbar-item">
                 <Link to="/jobs" className="navbar-link">
                   📋 Jobs
+                </Link>
+              </li>
+              <li className="navbar-item">
+                <Link to="/notifications" className="navbar-link notification-link">
+                  🔔 Notifications
+                  {unreadCount > 0 && (
+                    <span className="notification-badge">{unreadCount}</span>
+                  )}
                 </Link>
               </li>
               <li className="navbar-item">
@@ -63,6 +112,14 @@ const Navbar = () => {
               <li className="navbar-item">
                 <Link to="/reservations" className="navbar-link navbar-link-primary">
                   My Reservations
+                </Link>
+              </li>
+              <li className="navbar-item">
+                <Link to="/notifications" className="navbar-link notification-link">
+                  🔔 Notifications
+                  {unreadCount > 0 && (
+                    <span className="notification-badge">{unreadCount}</span>
+                  )}
                 </Link>
               </li>
               <li className="navbar-item">

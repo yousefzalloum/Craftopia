@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginCustomer } from '../services/customerService';
 import { loginCraftsman } from '../services/craftsmanService';
+import { loginAdmin } from '../services/adminService';
 import { useAuth } from '../context/AuthContext';
 import '../styles/Login.css';
 
@@ -51,8 +52,25 @@ function Login() {
             loginRole = 'artisan';
             console.log('✅ Login succeeded as artisan');
           } catch (artisanError) {
-            console.error('❌ Both customer and artisan login failed');
-            throw new Error('Invalid email or password');
+            console.log('Artisan login error status:', artisanError.status);
+            console.log('Artisan login error message:', artisanError.message);
+            
+            // If artisan login failed with 401, try admin login
+            if (artisanError.status === 401) {
+              console.log('Artisan login failed with 401, trying admin login...');
+              try {
+                console.log('Trying admin login...');
+                response = await loginAdmin(formData);
+                loginRole = 'admin';
+                console.log('✅ Login succeeded as admin');
+              } catch (adminError) {
+                console.error('❌ All login attempts failed');
+                throw new Error('Invalid email or password');
+              }
+            } else {
+              // Other error (not 401), re-throw
+              throw artisanError;
+            }
           }
         } else {
           // Other error (not 401), re-throw
@@ -67,6 +85,9 @@ function Login() {
       if (response.role === 'artisan') {
         console.log('Redirecting to artisan dashboard...');
         navigate('/craftsman-dashboard');
+      } else if (response.role === 'admin') {
+        console.log('Redirecting to admin dashboard...');
+        navigate('/admin-dashboard');
       } else {
         console.log('Redirecting to home...');
         navigate('/');

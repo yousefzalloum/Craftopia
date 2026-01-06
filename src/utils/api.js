@@ -63,7 +63,9 @@ export const apiRequest = async (endpoint, options = {}) => {
     if (!response.ok) {
       // Extract error message from response - prioritize backend message
       const errorMessage = data.message || data.error || data.msg || `HTTP error! status: ${response.status}`;
-      console.error('❌ API Error:', errorMessage, 'Full data:', data);
+      console.error('❌ API Error:', errorMessage);
+      console.error('❌ Status Code:', response.status);
+      console.error('❌ Full Error Data:', JSON.stringify(data, null, 2));
       throw new ApiError(errorMessage, response.status, data);
     }
 

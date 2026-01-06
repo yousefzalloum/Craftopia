@@ -258,6 +258,49 @@ export const uploadPortfolioImage = async (imageFile) => {
 };
 
 /**
+ * Delete portfolio image (authenticated endpoint)
+ * Requires valid JWT token in Authorization header
+ * @param {string} imageUrl - The image URL to delete (e.g., "/uploads/image.jpg")
+ * @returns {Promise<Object>} Response with updated portfolioImages array
+ */
+export const deletePortfolioImage = async (imageUrl) => {
+  try {
+    console.log('🗑️ Deleting portfolio image:', imageUrl);
+    
+    // Get token
+    const token = localStorage.getItem('token');
+    
+    // Get API base URL from environment or use default
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const url = `${baseUrl}/artisans/delete-portfolio`;
+    
+    console.log('🗑️ Delete URL:', url);
+    
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ imageUrl })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to delete portfolio image');
+    }
+    
+    console.log('✅ Portfolio image deleted successfully:', data);
+    console.log('🎨 Remaining portfolio images:', data.portfolioImages);
+    return data;
+  } catch (error) {
+    console.error('❌ Failed to delete portfolio image:', error);
+    throw new Error(error.message || 'Failed to delete portfolio image');
+  }
+};
+
+/**
  * Get craftsman profile
  * @param {string} craftsmanId - Craftsman ID
  * @returns {Promise<Object>} Craftsman profile data
@@ -306,6 +349,37 @@ export const getAllCraftsmen = async (filters = {}) => {
     const queryParams = new URLSearchParams(filters).toString();
     const endpoint = queryParams ? `/artisans?${queryParams}` : '/artisans';
     const response = await get(endpoint);
+    return response;
+  } catch (error) {
+    throw new Error(parseApiError(error));
+  }
+};
+
+/**
+ * Set artisan availability
+ * @param {Object} availabilityData
+ * @param {string} availabilityData.day - Day of the week (e.g., "Monday")
+ * @param {string} availabilityData.start_time - Start time (e.g., "09:00")
+ * @param {string} availabilityData.end_time - End time (e.g., "17:00")
+ * @returns {Promise<Object>} Created availability record
+ */
+export const setAvailability = async (availabilityData) => {
+  try {
+    const response = await post('/availability', availabilityData);
+    return response;
+  } catch (error) {
+    throw new Error(parseApiError(error));
+  }
+};
+
+/**
+ * Get artisan availability by artisan ID
+ * @param {string} artisanId - Artisan ID
+ * @returns {Promise<Array>} Array of availability records
+ */
+export const getArtisanAvailability = async (artisanId) => {
+  try {
+    const response = await get(`/availability/${artisanId}`);
     return response;
   } catch (error) {
     throw new Error(parseApiError(error));
