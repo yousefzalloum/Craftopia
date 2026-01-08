@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { loginCustomer } from '../services/customerService';
 import { loginCraftsman } from '../services/craftsmanService';
 import { loginAdmin } from '../services/adminService';
@@ -8,7 +8,9 @@ import '../styles/Login.css';
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const from = location.state?.from || '/';
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -89,8 +91,8 @@ function Login() {
         console.log('Redirecting to admin dashboard...');
         navigate('/admin-dashboard');
       } else {
-        console.log('Redirecting to home...');
-        navigate('/');
+        console.log('Redirecting to:', from);
+        navigate(from);
       }
     } catch (err) {
       console.error('❌ Login error caught in component:', err.message);

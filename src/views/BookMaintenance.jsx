@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { CraftController } from '../controllers/CraftController';
-import { CraftsmanController } from '../controllers/CraftsmanController';
 import { ReservationController } from '../controllers/ReservationController';
+import { getAllArtisans } from '../services/craftsmanService';
 import '../styles/BookMaintenance.css';
 
 const BookMaintenance = () => {
   const navigate = useNavigate();
   const { isLoggedIn, user, userId } = useAuth();
-  const crafts = CraftController.getCrafts();
-  const craftsmen = CraftsmanController.getCraftsmen();
+  const [artisans, setArtisans] = useState([]);
+  const [artisansLoading, setArtisansLoading] = useState(true);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -20,23 +19,46 @@ const BookMaintenance = () => {
     }
   }, [isLoggedIn, navigate]);
 
+  // Fetch artisans from API
+  useEffect(() => {
+    const fetchArtisans = async () => {
+      try {
+        setArtisansLoading(true);
+        const data = await getAllArtisans();
+        console.log('📋 Fetched artisans:', data);
+        setArtisans(data || []);
+      } catch (error) {
+        console.error('❌ Failed to fetch artisans:', error);
+        setArtisans([]);
+      } finally {
+        setArtisansLoading(false);
+      }
+    };
+    
+    if (isLoggedIn) {
+      fetchArtisans();
+    }
+  }, [isLoggedIn]);
+
   const [formData, setFormData] = useState({
     category: '',
     craftsmanId: '',
     serviceDescription: '',
     serviceAddress: '',
     appointmentDate: '',
-    appointmentTime: ''
+    appointmentTime: '',
+    customTitle: ''
   });
 
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Get unique professions from craftsmen
-  const professions = [...new Set(craftsmen.map(c => c.profession))];
+  // Get unique professions from artisans
+  const professions = [...new Set(artisans.map(a => a.craftType).filter(Boolean))];
 
-  // Filter craftsmen by selected profession
-  const availableCraftsmen = formData.category 
-    ? craftsmen.filter(c => c.profession === formData.category && c.availability)
+  // Filter artisans by selected profession
+  const availableArtisans = formData.category 
+    ? artisans.filter(a => a.craftType === formData.category)
     : [];
 
   const handleChange = (e) => {
@@ -57,7 +79,7 @@ const BookMaintenance = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
 
@@ -73,27 +95,32 @@ const BookMaintenance = () => {
       return;
     }
 
-    // Create maintenance appointment
-    const result = ReservationController.createReservation(
-      parseInt(formData.craftsmanId),
-      userId || user._id || user.id,
-      user.name,
-      user.email,
-      formData.appointmentDate,
-      formData.appointmentDate,
-      'maintenance',
-      formData.serviceAddress,
-      formData.serviceDescription,
-      formData.appointmentTime
-    );
+    try {
+      setLoading(true);
+      
+      // Create custom request using the new controller method
+      const title = formData.customTitle || `${formData.category} Service Request`;
+      
+      const result = await ReservationController.createCustomRequest(
+        formData.craftsmanId.toString(), // artisanId (convert to string for backend)
+        title,
+        `${formData.serviceDescription}\n\nAddress: ${formData.serviceAddress}\nPreferred time: ${formData.appointmentTime}`,
+        formData.appointmentDate
+      );
 
-    if (result.success) {
-      setMessage('✅ Appointment booked successfully! Redirecting...');
-      setTimeout(() => {
-        navigate('/reservations');
-      }, 2000);
-    } else {
-      setMessage(`❌ Error: ${result.message}`);
+      if (result.success) {
+        setMessage('✅ Custom request submitted successfully! Redirecting...');
+        setTimeout(() => {
+          navigate('/reservations');
+        }, 2000);
+      } else {
+        setMessage(`❌ Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      setMessage(`❌ Error: ${error.message || 'Failed to submit request'}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -112,6 +139,23 @@ const BookMaintenance = () => {
 
         <div className="maintenance-form-container">
           <form className="maintenance-form" onSubmit={handleSubmit}>
+            
+            {/* Request Title */}
+            <div className="form-group">
+              <label htmlFor="customTitle">
+                📋 Request Title *
+              </label>
+              <input
+                type="text"
+                id="customTitle"
+                name="customTitle"
+                value={formData.customTitle}
+                onChange={handleChange}
+                placeholder="e.g., Fix my dining table"
+                required
+              />
+              <small>Give your request a short, descriptive title</small>
+            </div>
             
             {/* Select Category/Profession */}
             <div className="form-group">
@@ -135,50 +179,51 @@ const BookMaintenance = () => {
               <small>Select the type of service you need</small>
             </div>
 
-            {/* Select Craftsman - Only shows after category is selected */}
+            {/* Select Artisan - Only shows after category is selected */}
             {formData.category && (
               <div className="form-group">
                 <label htmlFor="craftsmanId">
-                  👨‍🎨 Choose a Craftsman *
+                  👨‍🎨 Choose an Artisan *
                 </label>
                 
-                {/* Display available craftsmen as cards with profile links */}
-                <div className="craftsmen-list">
-                  {availableCraftsmen.map(craftsman => (
-                    <div key={craftsman.id} className="craftsman-card-select">
-                      <div className="craftsman-info">
-                        <h4>{craftsman.name}</h4>
-                        <p className="craftsman-details">
-                          ⭐ {craftsman.rating} ({craftsman.reviews} reviews) • 
-                          💵 ${craftsman.price || craftsman.rate}/hr {craftsman.city && `• 📍 ${craftsman.city}`}
-                        </p>
-                        <p className="craftsman-profession">{craftsman.profession}</p>
+                {artisansLoading ? (
+                  <p>Loading artisans...</p>
+                ) : availableArtisans.length > 0 ? (
+                  <div className="craftsmen-list">
+                    {availableArtisans.map(artisan => (
+                      <div key={artisan._id} className="craftsman-card-select">
+                        <div className="craftsman-info">
+                          <h4>{artisan.name}</h4>
+                          <p className="craftsman-details">
+                            ⭐ {artisan.averageRating ? artisan.averageRating.toFixed(1) : 'New'} • 
+                            📍 {artisan.location}
+                          </p>
+                          <p className="craftsman-profession">{artisan.craftType}</p>
+                        </div>
+                        <div className="craftsman-actions">
+                          <Link 
+                            to={`/artisan/${artisan._id}`} 
+                            className="btn-view-profile"
+                            target="_blank"
+                          >
+                            👁️ View Profile
+                          </Link>
+                          <button
+                            type="button"
+                            className={`btn-select-craftsman ${formData.craftsmanId === artisan._id ? 'selected' : ''}`}
+                            onClick={() => setFormData({...formData, craftsmanId: artisan._id})}
+                          >
+                            {formData.craftsmanId === artisan._id ? '✓ Selected' : 'Select'}
+                          </button>
+                        </div>
                       </div>
-                      <div className="craftsman-actions">
-                        <Link 
-                          to={`/craftsman/${craftsman.id}`} 
-                          className="btn-view-profile"
-                          target="_blank"
-                        >
-                          👁️ View Profile
-                        </Link>
-                        <button
-                          type="button"
-                          className={`btn-select-craftsman ${formData.craftsmanId === craftsman.id ? 'selected' : ''}`}
-                          onClick={() => setFormData({...formData, craftsmanId: craftsman.id})}
-                        >
-                          {formData.craftsmanId === craftsman.id ? '✓ Selected' : 'Select'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                {availableCraftsmen.length === 0 && (
-                  <p className="no-craftsmen">No craftsmen available in {formData.category} at the moment.</p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-craftsmen">No artisans available in {formData.category} at the moment.</p>
                 )}
                 
-                <small>{availableCraftsmen.length} craftsmen available in {formData.category}</small>
+                <small>{availableArtisans.length} artisans available in {formData.category}</small>
               </div>
             )}
 
@@ -266,8 +311,8 @@ const BookMaintenance = () => {
             )}
 
             {/* Submit Button */}
-            <button type="submit" className="btn-submit">
-              📞 Book Appointment
+            <button type="submit" className="btn-submit" disabled={loading}>
+              {loading ? '⏳ Submitting...' : '📞 Submit Request'}
             </button>
           </form>
 

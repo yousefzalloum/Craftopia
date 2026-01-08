@@ -15,6 +15,14 @@ const Notifications = () => {
 
   useEffect(() => {
     fetchNotifications();
+    
+    // Auto-refresh every 30 seconds while on the page
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing notifications...');
+      fetchNotifications();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -28,11 +36,13 @@ const Notifications = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('🔔 Fetching notifications for user...');
       const data = await NotificationController.getAllNotifications();
+      console.log('✅ Notifications fetched:', data);
       setNotifications(data);
     } catch (err) {
-      setError('Failed to load notifications. Please try again.');
-      console.error('Error fetching notifications:', err);
+      console.error('❌ Error fetching notifications:', err);
+      setError(err.message || 'Failed to load notifications. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -40,30 +50,54 @@ const Notifications = () => {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
+      console.log('📝 Marking notification as read:', notificationId);
       await NotificationController.markNotificationAsRead(notificationId);
+      
+      // Update local state
       setNotifications(prev => 
-        prev.map(n => n._id === notificationId ? { ...n, isRead: true } : n)
+        prev.map(n => n._id === notificationId ? { ...n, isRead: true, read: true } : n)
       );
+      
+      // Refresh from server to ensure sync
+      setTimeout(() => fetchNotifications(), 500);
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      console.error('❌ Failed to mark as read:', error);
+      alert('Failed to mark notification as read. Please try again.');
     }
   };
 
   const handleDelete = async (notificationId) => {
     try {
+      console.log('🗑️ Deleting notification:', notificationId);
       await NotificationController.deleteNotification(notificationId);
+      
+      // Update local state
       setNotifications(prev => prev.filter(n => n._id !== notificationId));
+      
+      console.log('✅ Notification deleted successfully');
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      console.error('❌ Failed to delete notification:', error);
+      alert('Failed to delete notification. Please try again.');
+      // Refresh to get current state
+      fetchNotifications();
     }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
+      console.log('📝 Marking all notifications as read');
       await NotificationController.markAllNotificationsAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      
+      // Update local state
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+      
+      // Refresh from server to ensure sync
+      setTimeout(() => fetchNotifications(), 500);
+      
+      console.log('✅ All notifications marked as read');
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      console.error('❌ Failed to mark all as read:', error);
+      alert('Failed to mark all notifications as read. Please try again.');
     }
   };
 

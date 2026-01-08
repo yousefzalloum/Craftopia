@@ -281,6 +281,18 @@
   color: #856404;
 }
 
+.status-warning {
+  background: #ffeaa7;
+  color: #d63031;
+  font-weight: 700;
+}
+
+.status-negotiating {
+  background: #fdcb6e;
+  color: #d63031;
+  font-weight: 700;
+}
+
 .status-confirmed {
   background: #d4edda;
   color: #155724;

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { CraftController } from '../controllers/CraftController';
 import { ReservationController } from '../controllers/ReservationController';
 import { UserController } from '../controllers/UserController';
@@ -8,6 +9,7 @@ import '../styles/CraftDetails.css';
 const CraftDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
   const craft = CraftController.getCraft(id);
   const currentUser = UserController.getCurrentUser();
 
@@ -19,6 +21,7 @@ const CraftDetails = () => {
   const [serviceAddress, setServiceAddress] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   if (!craft) {
     return (
@@ -33,6 +36,14 @@ const CraftDetails = () => {
       </div>
     );
   }
+
+  const handleReserveClick = () => {
+    if (!isLoggedIn) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    setShowReservationForm(true);
+  };
 
   const handleReservation = (e) => {
     e.preventDefault();
@@ -130,13 +141,44 @@ const CraftDetails = () => {
               </span>
             </div>
 
-            {craft.availability && !showReservationForm && (
+            {craft.availability && !showReservationForm && !showLoginPrompt && (
               <button 
                 className="btn-reserve"
-                onClick={() => setShowReservationForm(true)}
+                onClick={handleReserveClick}
               >
                 Reserve This Craft
               </button>
+            )}
+
+            {showLoginPrompt && (
+              <div className="login-prompt" style={{
+                padding: '1.5rem',
+                background: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '8px',
+                marginTop: '1rem',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: '0 0 1rem 0', color: '#856404', fontSize: '1.1rem' }}>
+                  🔒 You need to login to make a reservation
+                </p>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <button 
+                    className="btn-primary"
+                    onClick={() => navigate('/login', { state: { from: `/crafts/${id}` } })}
+                    style={{ padding: '0.75rem 2rem' }}
+                  >
+                    Login
+                  </button>
+                  <button 
+                    className="btn-secondary"
+                    onClick={() => setShowLoginPrompt(false)}
+                    style={{ padding: '0.75rem 2rem' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             )}
 
             {showReservationForm && craft.availability && (

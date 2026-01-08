@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getCustomerReservations, cancelReservation } from '../services/customerService';
-import { post } from '../utils/api';
+import { post, put } from '../utils/api';
 import Loading from '../components/Loading';
 import '../styles/Reservations.css';
 
@@ -19,7 +19,14 @@ const Reservations = () => {
   const [reviewingId, setReviewingId] = useState(null);
   const [reviewForm, setReviewForm] = useState({ stars_number: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
-  const [reviewedArtisans, setReviewedArtisans] = useState(new Set());
+  const [reviewedReservations, setReviewedReservations] = useState(new Set());
+  
+  // Price reply state
+  const [replyModalOpen, setReplyModalOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState(null);
+  const [replyType, setReplyType] = useState('accept');
+  const [negotiationNote, setNegotiationNote] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
 
   useEffect(() => {
     // Check authentication
@@ -43,8 +50,10 @@ const Reservations = () => {
         // Show all reservations including "New" (pending) ones
         setReservations(data || []);
         
-        // Fetch customer's existing reviews to check which artisans they've already reviewed
-        await fetchCustomerReviews();
+        // Track which reservations have reviews
+        const reservationsWithReviews = (data || []).filter(res => res.hasReview);
+        const reviewedIds = new Set(reservationsWithReviews.map(res => res._id));
+        setReviewedReservations(reviewedIds);
       } catch (err) {
         console.error('Failed to fetch reservations:', err);
         setError(err.message || 'Failed to load reservations');
@@ -56,22 +65,7 @@ const Reservations = () => {
     fetchReservations();
   }, [isLoggedIn, role, navigate]);
 
-  // Fetch customer's reviews to check which artisans they've already reviewed
-  const fetchCustomerReviews = async () => {
-    try {
-      const response = await get('/reviews/customer');
-      const reviews = Array.isArray(response) ? response : (response.reviews || []);
-      
-      // Create a set of artisan IDs that this customer has already reviewed
-      const reviewedArtisanIds = new Set(reviews.map(review => review.artisan));
-      setReviewedArtisans(reviewedArtisanIds);
-      
-      console.log('✅ Customer has reviewed these artisans:', Array.from(reviewedArtisanIds));
-    } catch (err) {
-      console.error('❌ Failed to fetch customer reviews:', err);
-      // Don't show error, just continue
-    }
-  };
+
 
   const handleOpenReviewForm = (reservationId) => {
     setReviewingId(reservationId);
@@ -94,14 +88,15 @@ const Reservations = () => {
       
       const reviewData = {
         artisanId: reservation.artisan._id,
+        reservationId: reservation._id,
         stars_number: reviewForm.stars_number,
         comment: reviewForm.comment.trim()
       };
 
       await post('/reviews', reviewData);
       
-      // Mark this artisan as reviewed
-      setReviewedArtisans(prev => new Set([...prev, reservation.artisan._id]));
+      // Mark this specific reservation as reviewed
+      setReviewedReservations(prev => new Set([...prev, reservation._id]));
       
       // Close the form
       handleCloseReviewForm();
@@ -112,6 +107,59 @@ const Reservations = () => {
       alert(err.message || 'Failed to submit review');
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  const handleOpenReplyModal = (reservation) => {
+    setSelectedReservation(reservation);
+    setReplyType('accept');
+    setNegotiationNote('');
+    setReplyModalOpen(true);
+  };
+
+  const handleCloseReplyModal = () => {
+    setReplyModalOpen(false);
+    setSelectedReservation(null);
+    setReplyType('accept');
+    setNegotiationNote('');
+  };
+
+  const handleSubmitReply = async () => {
+    if (!selectedReservation) return;
+
+    if (replyType === 'negotiate' && !negotiationNote.trim()) {
+      alert('Please enter a negotiation note');
+      return;
+    }
+
+    try {
+      setSubmittingReply(true);
+
+      const replyData = {
+        response: replyType
+      };
+
+      if (replyType === 'negotiate' && negotiationNote.trim()) {
+        replyData.note = negotiationNote.trim();
+      }
+
+      console.log('📤 Sending reply to:', `/reservations/${selectedReservation._id}/reply`);
+      console.log('📦 Reply data:', replyData);
+
+      await put(`/reservations/${selectedReservation._id}/reply`, replyData);
+
+      alert(`Price ${replyType === 'accept' ? 'accepted' : replyType === 'reject' ? 'rejected' : 'negotiation sent'} successfully!`);
+      
+      handleCloseReplyModal();
+      
+      // Refresh reservations
+      const data = await getCustomerReservations();
+      setReservations(data || []);
+    } catch (err) {
+      console.error('Failed to submit reply:', err);
+      alert(err.message || 'Failed to submit reply');
+    } finally {
+      setSubmittingReply(false);
     }
   };
 
@@ -139,10 +187,12 @@ const Reservations = () => {
   };
 
   const getDisplayStatus = (status) => {
-    if (status === 'New') {
-      return 'Pending approval';
-    }
-    return status;
+    const statusMap = {
+      'New': 'Pending approval',
+      'Price_Proposed': 'Price Proposed',
+      'Negotiating': 'Negotiating'
+    };
+    return statusMap[status] || status;
   };
 
   const formatDate = (dateString) => {
@@ -159,6 +209,8 @@ const Reservations = () => {
   const getStatusColor = (status) => {
     const colors = {
       'New': '#3498db',
+      'Price_Proposed': '#f39c12',
+      'Negotiating': '#e67e22',
       'Confirmed': '#27ae60',
       'In Progress': '#f39c12',
       'Completed': '#95a5a6',
@@ -221,6 +273,18 @@ const Reservations = () => {
                 onClick={() => setFilterStatus('New')}
               >
                 Pending ({reservations.filter(r => r.status === 'New').length})
+              </button>
+              <button 
+                className={`filter-btn ${filterStatus === 'Price_Proposed' ? 'active' : ''}`}
+                onClick={() => setFilterStatus('Price_Proposed')}
+              >
+                Price Proposed ({reservations.filter(r => r.status === 'Price_Proposed').length})
+              </button>
+              <button 
+                className={`filter-btn ${filterStatus === 'Negotiating' ? 'active' : ''}`}
+                onClick={() => setFilterStatus('Negotiating')}
+              >
+                Negotiating ({reservations.filter(r => r.status === 'Negotiating').length})
               </button>
               <button 
                 className={`filter-btn ${filterStatus === 'Accepted' ? 'active' : ''}`}
@@ -352,12 +416,37 @@ const Reservations = () => {
                       </span>
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold', color: '#27ae60' }}>
-                      ${reservation.total_price}
+                      ${reservation.agreed_price || reservation.total_price || 0}
                     </td>
                     <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#7f8c8d', whiteSpace: 'nowrap' }}>
                       {formatDate(reservation.createdAt)}
                     </td>
-                    <td style={{ padding: '1rem', textAlign: 'center' }}>
+                    <td style={{ padding: '1rem', textAlign: 'center', minWidth: '150px' }}>
+                      {(reservation.status === 'Price_Proposed' || reservation.status === 'Negotiating') && reservation.agreed_price > 0 && (
+                        <button
+                          onClick={() => handleOpenReplyModal(reservation)}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            background: '#f39c12',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            transition: 'background 0.3s ease',
+                            whiteSpace: 'nowrap'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = '#e67e22';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = '#f39c12';
+                          }}
+                        >
+                          💰 Respond (${reservation.agreed_price})
+                        </button>
+                      )}
                       {reservation.status === 'New' && (
                         <button
                           onClick={() => handleCancelReservation(reservation._id)}
@@ -387,7 +476,7 @@ const Reservations = () => {
                           {cancellingId === reservation._id ? 'Cancelling...' : 'Cancel'}
                         </button>
                       )}
-                      {reservation.status === 'Completed' && reservation.artisan?._id && !reviewedArtisans.has(reservation.artisan._id) && (
+                      {reservation.status === 'Completed' && reservation.artisan?._id && !reviewedReservations.has(reservation._id) && (
                         <button
                           onClick={() => handleOpenReviewForm(reservation._id)}
                           style={{
@@ -410,7 +499,7 @@ const Reservations = () => {
                           Add Review
                         </button>
                       )}
-                      {reservation.status === 'Completed' && reservation.artisan?._id && reviewedArtisans.has(reservation.artisan._id) && (
+                      {reservation.status === 'Completed' && reservation.artisan?._id && reviewedReservations.has(reservation._id) && (
                         <span style={{
                           padding: '0.5rem 1rem',
                           background: '#95a5a6',
@@ -564,6 +653,197 @@ const Reservations = () => {
                   }}
                 >
                   {submittingReview ? 'Submitting...' : 'Submit Review'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Price Reply Modal */}
+        {replyModalOpen && selectedReservation && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '550px',
+              width: '90%',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+            }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h2 style={{ margin: '0 0 0.5rem 0', color: '#2c3e50' }}>💰 Respond to Price Proposal</h2>
+                <p style={{ color: '#7f8c8d', margin: 0 }}>
+                  <strong>{selectedReservation.title || 'Service Request'}</strong>
+                </p>
+                <div style={{ 
+                  marginTop: '1rem', 
+                  padding: '1rem', 
+                  background: '#f8f9fa', 
+                  borderRadius: '8px',
+                  fontSize: '1.2rem',
+                  fontWeight: 'bold',
+                  color: '#27ae60',
+                  textAlign: 'center'
+                }}>
+                  Proposed Price: ${selectedReservation.agreed_price}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '1rem', fontWeight: 'bold', color: '#2c3e50' }}>
+                  Your Response:
+                </label>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '1rem',
+                    border: `2px solid ${replyType === 'accept' ? '#27ae60' : '#e1e8ed'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    background: replyType === 'accept' ? '#e8f8f0' : 'white',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    <input
+                      type="radio"
+                      name="replyType"
+                      value="accept"
+                      checked={replyType === 'accept'}
+                      onChange={(e) => setReplyType(e.target.value)}
+                      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#27ae60' }}>✓ Accept Price</div>
+                      <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>I agree with the proposed price</div>
+                    </div>
+                  </label>
+
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '1rem',
+                    border: `2px solid ${replyType === 'reject' ? '#e74c3c' : '#e1e8ed'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    background: replyType === 'reject' ? '#ffeaea' : 'white',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    <input
+                      type="radio"
+                      name="replyType"
+                      value="reject"
+                      checked={replyType === 'reject'}
+                      onChange={(e) => setReplyType(e.target.value)}
+                      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#e74c3c' }}>✗ Reject Price</div>
+                      <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>Price is not acceptable</div>
+                    </div>
+                  </label>
+
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '1rem',
+                    border: `2px solid ${replyType === 'negotiate' ? '#f39c12' : '#e1e8ed'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    background: replyType === 'negotiate' ? '#fff8e6' : 'white',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    <input
+                      type="radio"
+                      name="replyType"
+                      value="negotiate"
+                      checked={replyType === 'negotiate'}
+                      onChange={(e) => setReplyType(e.target.value)}
+                      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#f39c12' }}>💬 Negotiate Price</div>
+                      <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>Propose a different price</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {replyType === 'negotiate' && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                    Negotiation Note *
+                  </label>
+                  <textarea
+                    value={negotiationNote}
+                    onChange={(e) => setNegotiationNote(e.target.value)}
+                    placeholder="E.g., '150 is too high. Can we do 120?'"
+                    rows="3"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '2px solid #f39c12',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      fontFamily: 'inherit',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  onClick={handleCloseReplyModal}
+                  disabled={submittingReply}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: '#95a5a6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    cursor: submittingReply ? 'not-allowed' : 'pointer',
+                    opacity: submittingReply ? 0.6 : 1
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitReply}
+                  disabled={submittingReply || (replyType === 'negotiate' && !negotiationNote.trim())}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: submittingReply || (replyType === 'negotiate' && !negotiationNote.trim()) 
+                      ? '#95a5a6' 
+                      : replyType === 'accept' ? '#27ae60' : replyType === 'reject' ? '#e74c3c' : '#f39c12',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    cursor: submittingReply || (replyType === 'negotiate' && !negotiationNote.trim()) ? 'not-allowed' : 'pointer',
+                    opacity: submittingReply || (replyType === 'negotiate' && !negotiationNote.trim()) ? 0.6 : 1
+                  }}
+                >
+                  {submittingReply ? '⏳ Submitting...' : '✓ Submit Response'}
                 </button>
               </div>
             </div>

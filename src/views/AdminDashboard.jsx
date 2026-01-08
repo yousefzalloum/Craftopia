@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getStats, getAllUsers, deleteUser } from '../services/adminService';
+import { getStats, getAllUsers, deleteUser, broadcastNotification, getAllReviews, deleteReview } from '../services/adminService';
 import { API_BASE_URL } from '../utils/api';
 import Loading from '../components/Loading';
 import '../styles/AdminDashboard.css';
@@ -17,6 +17,16 @@ const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null); // {userId, userName, role}
   const [dataFetched, setDataFetched] = useState(false);
+  
+  // Notification broadcast states
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationTarget, setNotificationTarget] = useState('all');
+  const [broadcastSuccess, setBroadcastSuccess] = useState('');
+  const [broadcastError, setBroadcastError] = useState('');
+  
+  // Reviews states
+  const [reviews, setReviews] = useState([]);
+  const [deleteReviewConfirm, setDeleteReviewConfirm] = useState(null);
 
   useEffect(() => {
     // Wait for auth to finish loading
@@ -41,18 +51,28 @@ const AdminDashboard = () => {
       setError('');
       
       try {
-        // Fetch stats and users in parallel
-        const [statsData, usersData] = await Promise.all([
+        // Fetch stats, users, and reviews in parallel
+        const [statsData, usersData, reviewsData] = await Promise.all([
           getStats(),
-          getAllUsers()
+          getAllUsers(),
+          getAllReviews()
         ]);
         
         setStats(statsData);
         setUsers(usersData);
+        setReviews(reviewsData);
         setDataFetched(true);
+        
+        // Show info message if endpoints returned default values
+        if (statsData.totalUsers === 0 && usersData.length === 0 && reviewsData.length === 0) {
+          console.warn('⚠️ Admin endpoints may not be fully implemented in the backend');
+        }
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
-        setError(err.message || 'Failed to load dashboard data');
+        // Don't show error if it's just 404s (endpoints not implemented)
+        if (!err.message.includes('404') && !err.message.includes('not found')) {
+          setError(err.message || 'Failed to load dashboard data');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -90,6 +110,56 @@ const AdminDashboard = () => {
 
   const cancelDelete = () => {
     setDeleteConfirm(null);
+  };
+
+  const handleBroadcast = async (e) => {
+    e.preventDefault();
+    
+    if (!notificationMessage.trim()) {
+      setBroadcastError('Please enter a message');
+      return;
+    }
+    
+    setBroadcastError('');
+    setBroadcastSuccess('');
+    
+    try {
+      const response = await broadcastNotification(notificationMessage, notificationTarget);
+      setBroadcastSuccess(response.message || 'Notification sent successfully!');
+      setNotificationMessage('');
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setBroadcastSuccess(''), 5000);
+    } catch (err) {
+      setBroadcastError(err.message || 'Failed to send notification');
+    }
+  };
+
+  const handleDeleteReview = (reviewId, customerName) => {
+    setDeleteReviewConfirm({ reviewId, customerName });
+  };
+
+  const confirmDeleteReview = async () => {
+    if (!deleteReviewConfirm) return;
+    
+    try {
+      await deleteReview(deleteReviewConfirm.reviewId);
+      
+      // Remove review from local state
+      setReviews(reviews.filter(review => review._id !== deleteReviewConfirm.reviewId));
+      
+      setDeleteReviewConfirm(null);
+    } catch (err) {
+      alert('Failed to delete review: ' + err.message);
+    }
+  };
+
+  const cancelDeleteReview = () => {
+    setDeleteReviewConfirm(null);
+  };
+
+  const renderStars = (stars) => {
+    return '⭐'.repeat(stars);
   };
 
   const handleLogout = () => {
@@ -137,6 +207,57 @@ const AdminDashboard = () => {
           {error}
         </div>
       )}
+
+      {/* Broadcast Notification Section */}
+      <div className="broadcast-section">
+        <div className="broadcast-header">
+          <h2>📢 Broadcast Notification</h2>
+          <p>Send notifications to customers, artisans, or all users</p>
+        </div>
+        
+        {broadcastSuccess && (
+          <div className="success-message">
+            ✅ {broadcastSuccess}
+          </div>
+        )}
+        
+        {broadcastError && (
+          <div className="error-message">
+            ❌ {broadcastError}
+          </div>
+        )}
+        
+        <form onSubmit={handleBroadcast} className="broadcast-form">
+          <div className="form-group">
+            <label htmlFor="notificationMessage">Message:</label>
+            <textarea
+              id="notificationMessage"
+              value={notificationMessage}
+              onChange={(e) => setNotificationMessage(e.target.value)}
+              placeholder="Enter notification message..."
+              rows="4"
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="notificationTarget">Target Audience:</label>
+            <select
+              id="notificationTarget"
+              value={notificationTarget}
+              onChange={(e) => setNotificationTarget(e.target.value)}
+            >
+              <option value="all">👥 All Users</option>
+              <option value="customers">👤 Customers Only</option>
+              <option value="artisans">🔨 Artisans Only</option>
+            </select>
+          </div>
+          
+          <button type="submit" className="btn-broadcast">
+            📤 Send Notification
+          </button>
+        </form>
+      </div>
 
       {/* Statistics Cards */}
       {stats && (
@@ -237,14 +358,27 @@ const AdminDashboard = () => {
                   <tr key={user._id}>
                     <td className="user-name">{user.name}</td>
                     <td>{user.email}</td>
-                    <td>{user.phone_number}</td>
+                    <td>{user.phone_number || user.phone || 'N/A'}</td>
                     <td>
                       <span className={`role-badge ${user.role}`}>
                         {user.role === 'artisan' ? '🔨 Artisan' : '👤 Customer'}
                       </span>
                     </td>
-                    <td>{new Date(user.register_date).toLocaleDateString()}</td>
                     <td>
+                      {user.register_date || user.registered_date || user.createdAt 
+                        ? new Date(user.register_date || user.registered_date || user.createdAt).toLocaleDateString()
+                        : 'N/A'}
+                    </td>
+                    <td className="actions-cell">
+                      {user.role === 'artisan' && (
+                        <button 
+                          className="btn-view-profile"
+                          onClick={() => navigate(`/artisans/${user._id}`)}
+                          title="View artisan profile"
+                        >
+                          👁️ View
+                        </button>
+                      )}
                       <button 
                         className="btn-delete"
                         onClick={() => handleDeleteUser(user._id, user.name, user.role)}
@@ -260,7 +394,86 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Reviews Management Section */}
+      <div className="reviews-section">
+        <div className="reviews-header">
+          <h2>⭐ Reviews Management</h2>
+          <p>Total Reviews: {reviews.length}</p>
+        </div>
+
+        <div className="reviews-table-container">
+          <table className="reviews-table">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Artisan</th>
+                <th>Craft Type</th>
+                <th>Rating</th>
+                <th>Comment</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reviews.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="no-reviews">
+                    No reviews found
+                  </td>
+                </tr>
+              ) : (
+                reviews.map(review => {
+                  // Log the first review to see its structure
+                  if (reviews.indexOf(review) === 0) {
+                    console.log('📝 Review structure:', review);
+                  }
+                  
+                  // Skip reviews with missing required data
+                  if (!review || !review._id) {
+                    console.warn('⚠️ Skipping review with no ID:', review);
+                    return null;
+                  }
+                  
+                  // Handle different customer/artisan field formats
+                  const customer = review.customer || review.customerId || {};
+                  const artisan = review.artisan || review.artisanId || {};
+                  
+                  return (
+                    <tr key={review._id}>
+                      <td>
+                        <div className="review-user">
+                          <strong>{customer.name || customer._id || 'Unknown Customer'}</strong>
+                          <span className="user-email">{customer.email || 'N/A'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <strong>{artisan.name || artisan._id || 'Unknown Artisan'}</strong>
+                      </td>
+                      <td>{artisan.craftType || 'N/A'}</td>
+                      <td className="review-stars">
+                        {renderStars(review.stars_number || review.rating || 0)}
+                        <span className="star-count">({review.stars_number || review.rating || 0})</span>
+                      </td>
+                      <td className="review-comment">{review.comment || 'No comment'}</td>
+                      <td>{review.review_date ? new Date(review.review_date).toLocaleDateString() : new Date(review.createdAt).toLocaleDateString()}</td>
+                      <td>
+                        <button 
+                          className="btn-delete"
+                          onClick={() => handleDeleteReview(review._id, customer?.name || 'Unknown')}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Delete User Confirmation Modal */}
       {deleteConfirm && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -275,6 +488,28 @@ const AdminDashboard = () => {
                 Cancel
               </button>
               <button onClick={confirmDelete} className="btn-confirm-delete">
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Review Confirmation Modal */}
+      {deleteReviewConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>⚠️ Confirm Review Deletion</h3>
+            <p>
+              Are you sure you want to delete the review by <strong>{deleteReviewConfirm.customerName}</strong>?
+              <br />
+              This action cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button onClick={cancelDeleteReview} className="btn-cancel">
+                Cancel
+              </button>
+              <button onClick={confirmDeleteReview} className="btn-confirm-delete">
                 Yes, Delete
               </button>
             </div>

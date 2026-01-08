@@ -13,7 +13,6 @@ const Crafts = () => {
   const [selectedCraftType, setSelectedCraftType] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedRating, setSelectedRating] = useState('');
-  const [availableOnly, setAvailableOnly] = useState(false);
   const [artisans, setArtisans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,8 +30,7 @@ const Crafts = () => {
         console.log('🔍 Fetching artisans with filters:', { 
           craftType: selectedCraftType, 
           location: selectedLocation,
-          rating: selectedRating,
-          availableOnly 
+          rating: selectedRating
         });
         
         // Build filter object
@@ -63,11 +61,6 @@ const Crafts = () => {
           result = result.filter(artisan => artisan.averageRating >= minRating);
         }
         
-        // Availability filter
-        if (availableOnly) {
-          result = result.filter(artisan => artisan.availability !== false);
-        }
-        
         setArtisans(result);
       } catch (err) {
         console.error('❌ Failed to fetch artisans:', err);
@@ -78,7 +71,7 @@ const Crafts = () => {
     };
 
     fetchArtisans();
-  }, [selectedCraftType, selectedLocation, searchQuery, selectedRating, availableOnly]);
+  }, [selectedCraftType, selectedLocation, searchQuery, selectedRating]);
 
   if (loading) {
     return <Loading />;
@@ -109,11 +102,9 @@ const Crafts = () => {
             selectedCraftType={selectedCraftType}
             selectedLocation={selectedLocation}
             selectedRating={selectedRating}
-            availableOnly={availableOnly}
             onCraftTypeChange={setSelectedCraftType}
             onLocationChange={setSelectedLocation}
             onRatingChange={setSelectedRating}
-            onAvailabilityChange={setAvailableOnly}
           />
         </div>
 
@@ -178,7 +169,7 @@ const Crafts = () => {
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
                       <span style={{ color: '#7f8c8d', fontSize: '0.9rem' }}>📍 {artisan.location}</span>
-                      <span style={{ color: '#f39c12', fontSize: '0.9rem' }}>⭐ {artisan.averageRating.toFixed(1)}</span>
+                      <span style={{ color: '#f39c12', fontSize: '0.9rem' }}>⭐ {artisan.averageRating ? artisan.averageRating.toFixed(1) : '0.0'}</span>
                     </div>
                   </div>
                 </div>

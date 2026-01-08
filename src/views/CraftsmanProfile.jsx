@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getCraftsmanProfile, getArtisanAvailability } from '../services/craftsmanService';
 import { createReservation } from '../services/customerService';
-import { get } from '../utils/api';
+import { ReservationController } from '../controllers/ReservationController';
+import { get, post } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import Loading from '../components/Loading';
 import '../styles/CraftsmanProfile.css';
@@ -17,9 +18,9 @@ const CraftsmanProfile = () => {
   const [error, setError] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingData, setBookingData] = useState({
+    title: '',
     description: '',
-    start_date: '',
-    total_price: ''
+    start_date: ''
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState(null);
@@ -29,6 +30,19 @@ const CraftsmanProfile = () => {
   const [availability, setAvailability] = useState([]);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [portfolioComments, setPortfolioComments] = useState({});
+  const [commentInputs, setCommentInputs] = useState({});
+  const [commentLoading, setCommentLoading] = useState({});
+  
+  // Order modal states
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [selectedPortfolioItem, setSelectedPortfolioItem] = useState(null);
+  const [orderQuantity, setOrderQuantity] = useState(1);
+  const [orderDescription, setOrderDescription] = useState('');
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState(null);
+  const [orderSuccess, setOrderSuccess] = useState(null);
 
   useEffect(() => {
     // If we already have artisan data from navigation state, don't fetch
@@ -46,6 +60,7 @@ const CraftsmanProfile = () => {
         
         const data = await getCraftsmanProfile(id);
         console.log('✅ Craftsman profile fetched:', data);
+        console.log('🖼️ Portfolio images structure:', data.portfolioImages);
         
         setCraftsman(data);
       } catch (err) {
@@ -78,7 +93,7 @@ const CraftsmanProfile = () => {
       try {
         setReviewsLoading(true);
         console.log('📝 Fetching reviews for artisan:', craftsman._id);
-        const data = await get(`/reviews/artisan/${craftsman._id}`);
+        const data = await get(`/reviews/${craftsman._id}`);
         console.log('✅ Reviews fetched:', data);
         
         if (Array.isArray(data)) {
@@ -130,6 +145,41 @@ const CraftsmanProfile = () => {
     }
   }, [craftsman]);
 
+  // Fetch comments for portfolio images
+  useEffect(() => {
+    const fetchAllPortfolioComments = async () => {
+      if (!craftsman || !craftsman.portfolioImages || craftsman.portfolioImages.length === 0) return;
+      
+      try {
+        console.log('📝 Fetching comments for portfolio images...');
+        const commentsData = {};
+        
+        for (let i = 0; i < craftsman.portfolioImages.length; i++) {
+          const item = craftsman.portfolioImages[i];
+          // Handle both old format (string) and new format (object)
+          const imageUrl = typeof item === 'string' ? item : item.imageUrl;
+          
+          try {
+            const comments = await get(`/portfolio/comments?imageUrl=${encodeURIComponent(imageUrl)}`);
+            commentsData[i] = Array.isArray(comments) ? comments : [];
+            console.log(`✅ Fetched ${commentsData[i].length} comments for image ${i}`);
+          } catch (err) {
+            console.error(`❌ Failed to fetch comments for image ${i}:`, err);
+            commentsData[i] = [];
+          }
+        }
+        
+        setPortfolioComments(commentsData);
+      } catch (err) {
+        console.error('❌ Failed to fetch portfolio comments:', err);
+      }
+    };
+
+    if (craftsman) {
+      fetchAllPortfolioComments();
+    }
+  }, [craftsman]);
+
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setBookingLoading(true);
@@ -161,61 +211,56 @@ const CraftsmanProfile = () => {
         return;
       }
 
-      // Validate inputs
-      if (!bookingData.description || !bookingData.start_date || !bookingData.total_price) {
+      // Validate inputs for custom request
+      if (!bookingData.title || !bookingData.description || !bookingData.start_date) {
         setBookingError('Please fill in all required fields');
         setBookingLoading(false);
         return;
       }
 
       // Ensure the date is valid and in the future
-      const startDate = new Date(bookingData.start_date);
-      if (isNaN(startDate.getTime())) {
+      const deadline = new Date(bookingData.start_date);
+      if (isNaN(deadline.getTime())) {
         setBookingError('Invalid date format');
         setBookingLoading(false);
         return;
       }
 
-      if (startDate < new Date()) {
-        setBookingError('Start date must be in the future');
+      if (deadline < new Date()) {
+        setBookingError('Deadline must be in the future');
         setBookingLoading(false);
         return;
       }
 
-      // Ensure price is a valid number
-      const price = Number(bookingData.total_price);
-      if (isNaN(price) || price <= 0) {
-        setBookingError('Please enter a valid price');
-        setBookingLoading(false);
-        return;
-      }
+      // Format deadline as YYYY-MM-DD
+      const deadlineFormatted = deadline.toISOString().split('T')[0];
 
-      const reservationPayload = {
+      console.log('📋 Submitting custom request:', {
         artisanId: id,
-        description: bookingData.description.trim(),
-        start_date: startDate.toISOString().split('T')[0],
-        total_price: price
-      };
-
-      console.log('📋 Submitting reservation:', reservationPayload);
-      console.log('📋 Artisan ID:', id);
-      console.log('📋 Payload types:', {
-        artisanId: typeof reservationPayload.artisanId,
-        description: typeof reservationPayload.description,
-        start_date: typeof reservationPayload.start_date,
-        total_price: typeof reservationPayload.total_price
+        title: bookingData.title,
+        description: bookingData.description,
+        deadline: deadlineFormatted
       });
       
-      const response = await createReservation(reservationPayload);
-      console.log('✅ Reservation created successfully:', response);
+      const result = await ReservationController.createCustomRequest(
+        id, // artisanId
+        bookingData.title.trim(),
+        bookingData.description.trim(),
+        deadlineFormatted
+      );
       
-      setBookingSuccess(true);
-      setTimeout(() => {
-        setShowBookingModal(false);
-        setBookingSuccess(false);
-        setBookingData({ description: '', start_date: '', total_price: '' });
-        navigate('/reservations');
-      }, 2000);
+      if (result.success) {
+        console.log('✅ Custom request created successfully:', result);
+        setBookingSuccess(true);
+        setTimeout(() => {
+          setShowBookingModal(false);
+          setBookingSuccess(false);
+          setBookingData({ title: '', description: '', start_date: '' });
+          navigate('/reservations');
+        }, 2000);
+      } else {
+        setBookingError(result.message);
+      }
     } catch (err) {
       console.error('❌ Booking error:', err);
       console.error('❌ Error details:', {
@@ -246,7 +291,7 @@ const CraftsmanProfile = () => {
 
   const openBookingModal = () => {
     if (!isLoggedIn) {
-      navigate('/login');
+      setShowLoginPrompt(true);
       return;
     }
     if (role !== 'customer') {
@@ -256,9 +301,145 @@ const CraftsmanProfile = () => {
     setShowBookingModal(true);
   };
 
+  // Handle opening order modal
+  const handleOpenOrderModal = (portfolioItem, index) => {
+    if (!isLoggedIn) {
+      alert('Please login to place an order');
+      navigate('/login');
+      return;
+    }
+    
+    setSelectedPortfolioItem({
+      ...portfolioItem,
+      index
+    });
+    setOrderQuantity(1);
+    setOrderDescription('');
+    setOrderError(null);
+    setOrderSuccess(null);
+    setIsOrderModalOpen(true);
+  };
+
+  // Handle closing order modal
+  const handleCloseOrderModal = () => {
+    setIsOrderModalOpen(false);
+    setSelectedPortfolioItem(null);
+    setOrderQuantity(1);
+    setOrderDescription('');
+    setOrderError(null);
+    setOrderSuccess(null);
+  };
+
+  // Handle placing order
+  const handlePlaceOrder = async () => {
+    if (!selectedPortfolioItem) return;
+    
+    if (!orderDescription.trim()) {
+      setOrderError('Please provide a description for your order');
+      return;
+    }
+    
+    if (orderQuantity < 1) {
+      setOrderError('Quantity must be at least 1');
+      return;
+    }
+    
+    try {
+      setOrderLoading(true);
+      setOrderError(null);
+      
+      const imageUrl = typeof selectedPortfolioItem === 'string' 
+        ? selectedPortfolioItem 
+        : selectedPortfolioItem.imageUrl;
+      
+      const title = selectedPortfolioItem.description || `Portfolio Item ${selectedPortfolioItem.index + 1}`;
+      const itemPrice = selectedPortfolioItem.price || 0;
+      
+      console.log('🛒 Creating order with:', {
+        selectedPortfolioItem,
+        itemPrice,
+        quantity: orderQuantity,
+        totalPrice: itemPrice * orderQuantity
+      });
+      
+      const result = await ReservationController.createPortfolioOrder(
+        id, // artisanId
+        title,
+        imageUrl,
+        orderQuantity,
+        orderDescription,
+        itemPrice
+      );
+      
+      if (result.success) {
+        setOrderSuccess(result.message);
+        setTimeout(() => {
+          handleCloseOrderModal();
+          alert('Order placed successfully! You can track it in your reservations.');
+          navigate('/reservations');
+        }, 1500);
+      } else {
+        setOrderError(result.message);
+      }
+    } catch (err) {
+      console.error('Failed to place order:', err);
+      setOrderError(err.message || 'Failed to place order');
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
+  const handlePortfolioComment = async (imageUrl, index) => {
+    const comment = commentInputs[index];
+    
+    if (!comment || !comment.trim()) {
+      return;
+    }
+
+    if (!isLoggedIn) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    if (role !== 'customer') {
+      alert('Only customers can comment on portfolio images');
+      return;
+    }
+
+    try {
+      setCommentLoading({ ...commentLoading, [index]: true });
+      
+      const payload = {
+        artisanId: id,
+        imageUrl: imageUrl,
+        comment: comment.trim()
+      };
+
+      console.log('📝 Submitting portfolio comment:', payload);
+      await post('/portfolio/comment', payload);
+      
+      // Refetch comments for this image
+      const updatedComments = await get(`/portfolio/comments?imageUrl=${encodeURIComponent(imageUrl)}`);
+      setPortfolioComments({ 
+        ...portfolioComments, 
+        [index]: Array.isArray(updatedComments) ? updatedComments : []
+      });
+      
+      // Clear the input
+      setCommentInputs({ ...commentInputs, [index]: '' });
+      
+      console.log('✅ Comment submitted successfully');
+    } catch (err) {
+      console.error('❌ Failed to submit comment:', err);
+      alert(err.message || 'Failed to submit comment. Please try again.');
+    } finally {
+      setCommentLoading({ ...commentLoading, [index]: false });
+    }
+  };
+
   const closeBookingModal = () => {
     setShowBookingModal(false);
-    setBookingData({ description: '', start_date: '', total_price: '' });
+    setBookingData({ title: '', description: '', start_date: '' });
     setBookingError(null);
     setBookingSuccess(false);
   };
@@ -357,27 +538,71 @@ const CraftsmanProfile = () => {
                   {craftsman.location || 'City not specified'}
                 </p>
               
-              {/* Book Service Button - Only for logged in customers */}
-              {isLoggedIn && role === 'customer' && (
-                <button 
-                  onClick={openBookingModal}
-                  style={{
-                    marginTop: '1rem',
-                    padding: '0.75rem 2rem',
-                    background: '#27ae60',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    transition: 'background 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => e.target.style.background = '#229954'}
-                  onMouseLeave={(e) => e.target.style.background = '#27ae60'}
-                >
-                  📅 Book Service
-                </button>
+              {/* Book Service Button - Visible to everyone */}
+              <button 
+                onClick={openBookingModal}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem 2rem',
+                  background: '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'background 0.3s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#229954'}
+                onMouseLeave={(e) => e.target.style.background = '#27ae60'}
+              >
+                � Custom Service
+              </button>
+              
+              {/* Login Prompt - Shows when non-logged-in users try to book */}
+              {showLoginPrompt && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '1.5rem',
+                  background: '#fff3cd',
+                  border: '1px solid #ffc107',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <p style={{ margin: '0 0 1rem 0', color: '#856404', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                    🔒 You need to login to book this service
+                  </p>
+                  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                    <button 
+                      onClick={() => navigate('/login', { state: { from: `/craftsman/${id}` } })}
+                      style={{ 
+                        padding: '0.75rem 2rem', 
+                        background: '#3498db', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '8px', 
+                        fontWeight: 'bold', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      Login
+                    </button>
+                    <button 
+                      onClick={() => setShowLoginPrompt(false)}
+                      style={{ 
+                        padding: '0.75rem 2rem', 
+                        background: '#95a5a6', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '8px', 
+                        fontWeight: 'bold', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               )}
               
               <div className="profile-stats-enhanced">
@@ -441,25 +666,183 @@ const CraftsmanProfile = () => {
               <h2>Portfolio</h2>
             </div>
             <div className="portfolio-grid-enhanced">
-              {craftsman.portfolioImages.map((image, index) => (
-                <div key={index} className="portfolio-item-enhanced">
-                  <div className="portfolio-overlay">
-                    <span className="portfolio-number">#{index + 1}</span>
-                  </div>
-                  <img 
-                    src={
-                      image.startsWith('http') 
-                        ? image 
-                        : `http://localhost:5000${image}`
-                    }
-                    alt={`Portfolio ${index + 1}`}
-                    onError={(e) => {
-                      console.error('❌ Failed to load portfolio image:', e.target.src);
-                      e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
-                    }}
-                  />
+              {craftsman.portfolioImages.map((item, index) => {
+                // Handle both old format (just URL string) and new format (object with imageUrl, price, description)
+                const imageUrl = typeof item === 'string' ? item : item.imageUrl;
+                const price = typeof item === 'object' ? item.price : null;
+                const description = typeof item === 'object' ? item.description : null;
+                
+                return (
+                  <div key={index} className="portfolio-item-enhanced" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ position: 'relative' }}>
+                      <div className="portfolio-overlay">
+                        <span className="portfolio-number">#{index + 1}</span>
+                      </div>
+                      <img 
+                        src={
+                          imageUrl.startsWith('http') 
+                            ? imageUrl 
+                            : `http://localhost:5000${imageUrl}`
+                        }
+                        alt={description || `Portfolio ${index + 1}`}
+                        onError={(e) => {
+                          console.error('❌ Failed to load portfolio image:', e.target.src);
+                          e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Display price and description if available */}
+                    {(price || description) && (
+                      <div style={{ padding: '0.75rem', background: 'white', borderRadius: '8px', border: '1px solid #e1e8ed' }}>
+                        {price && (
+                          <div style={{ marginBottom: '0.5rem' }}>
+                            <strong style={{ color: '#27ae60', fontSize: '1.2rem' }}>
+                              ${price}
+                            </strong>
+                          </div>
+                        )}
+                        {description && (
+                          <p style={{ margin: 0, color: '#2c3e50', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                            {description}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* ORDER BUTTON - ALWAYS VISIBLE */}
+                    <button
+                      onClick={() => handleOpenOrderModal(item, index)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        background: '#3498db',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '1rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        transition: 'background 0.3s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        marginTop: '0.5rem'
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = '#2980b9'}
+                      onMouseLeave={(e) => e.target.style.background = '#3498db'}
+                    >
+                      🛒 Order This Item
+                    </button>
+                  
+                  {/* Comment Section for Customers */}
+                  {isLoggedIn && role === 'customer' && (
+                    <div style={{ padding: '0.75rem', background: '#f8f9fa', borderRadius: '8px' }}>
+                      <textarea
+                        placeholder="Add a comment about this work..."
+                        value={commentInputs[index] || ''}
+                        onChange={(e) => setCommentInputs({ ...commentInputs, [index]: e.target.value })}
+                        rows="2"
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          border: '1px solid #dee2e6',
+                          borderRadius: '6px',
+                          fontSize: '0.9rem',
+                          resize: 'vertical',
+                          marginBottom: '0.5rem'
+                        }}
+                      />
+                      <button
+                        onClick={() => handlePortfolioComment(imageUrl, index)}
+                        disabled={!commentInputs[index]?.trim() || commentLoading[index]}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          background: commentInputs[index]?.trim() ? '#3498db' : '#95a5a6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '0.9rem',
+                          cursor: commentInputs[index]?.trim() ? 'pointer' : 'not-allowed',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {commentLoading[index] ? 'Posting...' : '💬 Comment'}
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Show login prompt for non-logged-in users */}
+                  {!isLoggedIn && (
+                    <div style={{ padding: '0.75rem', background: '#fff3cd', borderRadius: '8px', textAlign: 'center' }}>
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#856404' }}>
+                        <a href="/login" style={{ color: '#3498db', textDecoration: 'underline' }}>Login</a> to comment
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Display existing comments */}
+                  {portfolioComments[index] && portfolioComments[index].length > 0 && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <h4 style={{ fontSize: '0.95rem', marginBottom: '0.75rem', color: '#2c3e50' }}>
+                        💬 Comments ({portfolioComments[index].length})
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {portfolioComments[index].map((comment) => (
+                          <div 
+                            key={comment._id} 
+                            style={{
+                              padding: '0.75rem',
+                              background: 'white',
+                              border: '1px solid #e1e8ed',
+                              borderRadius: '8px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                              <img 
+                                src={
+                                  comment.customer.profilePicture?.startsWith('http') 
+                                    ? comment.customer.profilePicture
+                                    : `http://localhost:5000${comment.customer.profilePicture}`
+                                }
+                                alt={comment.customer.name}
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  objectFit: 'cover'
+                                }}
+                                onError={(e) => {
+                                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.customer.name)}&background=3498db&color=fff&size=32`;
+                                }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem', color: '#2c3e50' }}>
+                                  {comment.customer.name}
+                                </p>
+                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#7f8c8d' }}>
+                                  {new Date(comment.createdAt).toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric', 
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#34495e', lineHeight: '1.5' }}>
+                              {comment.comment}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         )}
@@ -600,7 +983,7 @@ const CraftsmanProfile = () => {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ margin: 0 }}>Book Service</h2>
+              <h2 style={{ margin: 0 }}>Custom Service Request</h2>
               <button 
                 onClick={closeBookingModal}
                 style={{
@@ -622,11 +1005,31 @@ const CraftsmanProfile = () => {
                 color: '#27ae60'
               }}>
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✓</div>
-                <h3>Reservation Created Successfully!</h3>
+                <h3>Custom Request Created Successfully!</h3>
                 <p>Redirecting to your reservations...</p>
               </div>
             ) : (
               <form onSubmit={handleBookingSubmit}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                    Service Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={bookingData.title || ''}
+                    onChange={(e) => setBookingData({ ...bookingData, title: e.target.value })}
+                    placeholder="e.g., Custom Guitar Table"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
                     Service Description *
@@ -634,7 +1037,7 @@ const CraftsmanProfile = () => {
                   <textarea
                     value={bookingData.description}
                     onChange={(e) => setBookingData({ ...bookingData, description: e.target.value })}
-                    placeholder="Describe the service you need..."
+                    placeholder="Describe the custom service you need in detail..."
                     required
                     rows="4"
                     style={{
@@ -649,38 +1052,16 @@ const CraftsmanProfile = () => {
                   />
                 </div>
 
-                <div style={{ marginBottom: '1rem' }}>
+                <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                    Start Date *
+                    Deadline *
                   </label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={bookingData.start_date}
                     onChange={(e) => setBookingData({ ...bookingData, start_date: e.target.value })}
                     required
-                    min={new Date().toISOString().slice(0, 16)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #ddd',
-                      borderRadius: '8px',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                    Total Price ($) *
-                  </label>
-                  <input
-                    type="number"
-                    value={bookingData.total_price}
-                    onChange={(e) => setBookingData({ ...bookingData, total_price: e.target.value })}
-                    placeholder="Enter price"
-                    required
-                    min="1"
-                    step="0.01"
+                    min={new Date().toISOString().split('T')[0]}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -743,6 +1124,173 @@ const CraftsmanProfile = () => {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Order Modal */}
+      {isOrderModalOpen && selectedPortfolioItem && (
+        <div className="modal-overlay" onClick={handleCloseOrderModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h2>🛒 Place Order</h2>
+              <button onClick={handleCloseOrderModal} className="btn-close-modal">
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ padding: '1.5rem' }}>
+              {orderError && (
+                <div className="error-message" style={{ marginBottom: '1rem', background: '#ffe5e5', color: '#e74c3c', padding: '1rem', borderRadius: '8px' }}>
+                  ❌ {orderError}
+                </div>
+              )}
+              
+              {orderSuccess && (
+                <div className="success-message" style={{ marginBottom: '1rem', background: '#d4edda', color: '#155724', padding: '1rem', borderRadius: '8px' }}>
+                  ✅ {orderSuccess}
+                </div>
+              )}
+              
+              {/* Portfolio Item Preview */}
+              <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+                <img 
+                  src={
+                    (typeof selectedPortfolioItem === 'string' ? selectedPortfolioItem : selectedPortfolioItem.imageUrl).startsWith('http')
+                      ? (typeof selectedPortfolioItem === 'string' ? selectedPortfolioItem : selectedPortfolioItem.imageUrl)
+                      : `http://localhost:5000${typeof selectedPortfolioItem === 'string' ? selectedPortfolioItem : selectedPortfolioItem.imageUrl}`
+                  }
+                  alt="Portfolio item"
+                  style={{ 
+                    maxWidth: '100%',
+                    maxHeight: '300px',
+                    borderRadius: '8px',
+                    border: '2px solid #667eea'
+                  }}
+                />
+                {selectedPortfolioItem.price && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <strong style={{ color: '#27ae60', fontSize: '1.5rem' }}>
+                      ${selectedPortfolioItem.price} per item
+                    </strong>
+                  </div>
+                )}
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label htmlFor="orderQuantity" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#2c3e50' }}>
+                  Quantity *
+                </label>
+                <input
+                  type="number"
+                  id="orderQuantity"
+                  min="1"
+                  value={orderQuantity}
+                  onChange={(e) => setOrderQuantity(parseInt(e.target.value) || 1)}
+                  disabled={orderLoading}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label htmlFor="orderDescription" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#2c3e50' }}>
+                  Order Details / Special Instructions *
+                </label>
+                <textarea
+                  id="orderDescription"
+                  value={orderDescription}
+                  onChange={(e) => setOrderDescription(e.target.value)}
+                  placeholder="Describe your requirements, delivery location, or any special instructions..."
+                  rows="4"
+                  disabled={orderLoading}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    resize: 'vertical'
+                  }}
+                ></textarea>
+              </div>
+              
+              {selectedPortfolioItem.price && (
+                <div style={{ 
+                  background: '#f8f9fa', 
+                  padding: '1rem', 
+                  borderRadius: '8px', 
+                  marginBottom: '1.5rem',
+                  border: '1px solid #dee2e6'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span>Price per item:</span>
+                    <strong>${selectedPortfolioItem.price}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span>Quantity:</span>
+                    <strong>{orderQuantity}</strong>
+                  </div>
+                  <hr style={{ margin: '0.5rem 0', border: 'none', borderTop: '1px solid #dee2e6' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem' }}>
+                    <strong>Estimated Total:</strong>
+                    <strong style={{ color: '#27ae60' }}>
+                      ${(selectedPortfolioItem.price * orderQuantity).toFixed(2)}
+                    </strong>
+                  </div>
+                  <small style={{ color: '#666', display: 'block', marginTop: '0.5rem' }}>
+                    * Final price will be agreed upon with the artisan
+                  </small>
+                </div>
+              )}
+              
+              <div className="modal-actions" style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={handleCloseOrderModal}
+                  className="btn-cancel"
+                  disabled={orderLoading}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    cursor: orderLoading ? 'not-allowed' : 'pointer',
+                    opacity: orderLoading ? 0.6 : 1
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePlaceOrder}
+                  className="btn-save"
+                  disabled={orderLoading || !orderDescription.trim()}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: orderLoading || !orderDescription.trim() ? '#95a5a6' : '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    cursor: (orderLoading || !orderDescription.trim()) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {orderLoading ? 'Placing Order...' : 'Place Order'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

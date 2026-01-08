@@ -214,16 +214,22 @@ export const uploadProfilePicture = async (imageFile) => {
  * Upload portfolio image (authenticated endpoint)
  * Requires valid JWT token in Authorization header
  * @param {File} imageFile - The image file to upload
- * @returns {Promise<Object>} Response with portfolioImages array
+ * @param {number} price - Price of the work
+ * @param {string} description - Description of the work
+ * @returns {Promise<Object>} Response with portfolio array
  */
-export const uploadPortfolioImage = async (imageFile) => {
+export const uploadPortfolioImage = async (imageFile, price, description) => {
   try {
     console.log('🎨 Uploading portfolio image...');
     console.log('🎨 File:', imageFile.name, imageFile.type, imageFile.size);
+    console.log('🎨 Price:', price);
+    console.log('🎨 Description:', description);
     
-    // Create FormData and append the image file
+    // Create FormData and append the image file, price, and description
     const formData = new FormData();
     formData.append('image', imageFile);
+    formData.append('price', price);
+    formData.append('description', description);
     
     // Get token
     const token = localStorage.getItem('token');
@@ -307,9 +313,27 @@ export const deletePortfolioImage = async (imageUrl) => {
  */
 export const getCraftsmanProfile = async (craftsmanId) => {
   try {
+    // First try the direct endpoint
     const response = await get(`/artisans/${craftsmanId}`);
     return response;
   } catch (error) {
+    // If 404, fallback to fetching all artisans and filtering
+    if (error.status === 404) {
+      console.log('⚠️ Direct endpoint not found, trying to fetch from all artisans...');
+      try {
+        const allArtisans = await get('/artisans');
+        const artisan = allArtisans.find(a => a._id === craftsmanId);
+        if (artisan) {
+          console.log('✅ Found artisan in all artisans list');
+          return artisan;
+        }
+        // If still not found, throw original 404
+        throw error;
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+        throw error; // Throw original 404 error
+      }
+    }
     // Preserve the original error with status if it's an ApiError
     if (error.status) {
       throw error;
@@ -380,6 +404,19 @@ export const setAvailability = async (availabilityData) => {
 export const getArtisanAvailability = async (artisanId) => {
   try {
     const response = await get(`/availability/${artisanId}`);
+    return response;
+  } catch (error) {
+    throw new Error(parseApiError(error));
+  }
+};
+
+/**
+ * Get all artisans (public endpoint)
+ * @returns {Promise<Array>} Array of all artisans
+ */
+export const getAllArtisans = async () => {
+  try {
+    const response = await get('/artisans');
     return response;
   } catch (error) {
     throw new Error(parseApiError(error));

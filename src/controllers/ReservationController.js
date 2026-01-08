@@ -8,6 +8,7 @@ import {
   addReservation 
 } from '../models/Reservation';
 import { getCraftById } from '../models/Craft';
+import { createReservation } from '../utils/api';
 
 export const ReservationController = {
   // Get all reservations
@@ -207,6 +208,79 @@ export const ReservationController = {
     } catch (error) {
       console.error('Error rejecting reservation:', error);
       return { success: false, message: error.message };
+    }
+  },
+
+  // Create Portfolio Order (from portfolio item)
+  createPortfolioOrder: async (artisanId, title, referenceImage, quantity, description, itemPrice) => {
+    try {
+      console.log('📦 Creating portfolio order:', { artisanId, title, referenceImage, quantity, description, itemPrice });
+      console.log('💰 Item price type and value:', typeof itemPrice, itemPrice);
+      
+      const orderData = {
+        artisanId,
+        job_type: 'Order',
+        title,
+        reference_image: referenceImage,
+        quantity: parseInt(quantity) || 1,
+        description
+      };
+
+      // Add agreed_price if itemPrice is provided
+      if (itemPrice && itemPrice > 0) {
+        orderData.agreed_price = parseFloat(itemPrice) * parseInt(quantity);
+        console.log('✅ Calculated agreed_price:', orderData.agreed_price);
+      } else {
+        console.log('⚠️ No price provided or price is 0:', itemPrice);
+      }
+
+      console.log('📤 Sending order data:', orderData);
+      const response = await createReservation(orderData);
+      console.log('✅ Portfolio order created:', response);
+      
+      return {
+        success: true,
+        reservation: response,
+        message: 'Order placed successfully!'
+      };
+    } catch (error) {
+      console.error('❌ Error creating portfolio order:', error);
+      return {
+        success: false,
+        reservation: null,
+        message: error.message || 'Failed to create order'
+      };
+    }
+  },
+
+  // Create Custom Request (from booking button)
+  createCustomRequest: async (artisanId, title, description, deadline) => {
+    try {
+      console.log('📝 Creating custom request:', { artisanId, title, description, deadline });
+      
+      const requestData = {
+        artisanId,
+        job_type: 'Custom_Request',
+        title,
+        description,
+        deadline
+      };
+
+      const response = await createReservation(requestData);
+      console.log('✅ Custom request created:', response);
+      
+      return {
+        success: true,
+        reservation: response,
+        message: 'Custom request submitted successfully!'
+      };
+    } catch (error) {
+      console.error('❌ Error creating custom request:', error);
+      return {
+        success: false,
+        reservation: null,
+        message: error.message || 'Failed to create custom request'
+      };
     }
   }
 };

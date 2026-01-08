@@ -6,11 +6,9 @@ const FilterBar = ({
   selectedCraftType = '',
   selectedLocation = '',
   selectedRating = '',
-  availableOnly = false,
   onCraftTypeChange,
   onLocationChange,
-  onRatingChange,
-  onAvailabilityChange
+  onRatingChange
 }) => {
   return (
     <div className="filter-bar">
@@ -59,18 +57,6 @@ const FilterBar = ({
           <option value="2">2+ Stars</option>
           <option value="1">1+ Stars</option>
         </select>
-      </div>
-
-      <div className="filter-section">
-        <label className="filter-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-          <input 
-            type="checkbox"
-            checked={availableOnly}
-            onChange={(e) => onAvailabilityChange(e.target.checked)}
-            style={{ width: 'auto', cursor: 'pointer' }}
-          />
-          ✅ Available Only
-        </label>
       </div>
     </div>
   );

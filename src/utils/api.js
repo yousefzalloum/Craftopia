@@ -141,11 +141,27 @@ export const patch = (endpoint, data, options = {}) => {
 /**
  * DELETE request helper
  */
-export const del = (endpoint, options = {}) => {
-  return apiRequest(endpoint, {
+export const del = (endpoint, data = null, options = {}) => {
+  const requestOptions = {
     method: 'DELETE',
     ...options,
-  });
+  };
+  
+  // Add body if data is provided
+  if (data) {
+    requestOptions.body = JSON.stringify(data);
+  }
+  
+  return apiRequest(endpoint, requestOptions);
+};
+
+/**
+ * Create a new reservation (Order or Custom Request)
+ * @param {Object} reservationData - Reservation details
+ * @returns {Promise<Object>} Created reservation
+ */
+export const createReservation = async (reservationData) => {
+  return post('/reservations', reservationData);
 };
 
 /**

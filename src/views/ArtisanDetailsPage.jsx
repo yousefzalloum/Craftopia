@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { getCraftsmanProfile, getArtisanAvailability } from '../services/craftsmanService';
+import { deletePortfolioImage } from '../services/adminService';
+import { ReservationController } from '../controllers/ReservationController';
 import { get } from '../utils/api';
 import Loading from '../components/Loading';
 import '../styles/CraftsmanProfile.css';
@@ -8,6 +11,7 @@ import '../styles/CraftsmanProfile.css';
 const ArtisanDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { role, isLoggedIn } = useAuth();
   const [artisan, setArtisan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,6 +19,16 @@ const ArtisanDetailsPage = () => {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [availability, setAvailability] = useState([]);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [deletingImage, setDeletingImage] = useState(null);
+  
+  // Order modal states
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [selectedPortfolioItem, setSelectedPortfolioItem] = useState(null);
+  const [orderQuantity, setOrderQuantity] = useState(1);
+  const [orderDescription, setOrderDescription] = useState('');
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState(null);
+  const [orderSuccess, setOrderSuccess] = useState(null);
 
   useEffect(() => {
     const fetchArtisanDetails = async () => {
@@ -59,13 +73,13 @@ const ArtisanDetailsPage = () => {
       try {
         setReviewsLoading(true);
         console.log('📋 Fetching reviews for artisan:', id);
-        console.log('📋 Using endpoint: /reviews/artisan/' + id);
-        const data = await get(`/reviews/artisan/${id}`);
+        console.log('📋 Using endpoint: /reviews/' + id);
+        const data = await get(`/reviews/${id}`);
         console.log('✅ Reviews fetched - RAW DATA:', data);
         console.log('✅ Is Array?', Array.isArray(data));
         console.log('✅ Data type:', typeof data);
         
-        // Handle both array and object responses
+        // Handle array response directly
         if (Array.isArray(data)) {
           console.log('✅ Setting reviews array with length:', data.length);
           setReviews(data);
@@ -132,10 +146,10 @@ const ArtisanDetailsPage = () => {
             {error}
           </p>
           <button 
-            onClick={() => navigate('/crafts')} 
+            onClick={() => navigate(role === 'admin' ? '/admin-dashboard' : '/crafts')} 
             style={{ marginTop: '1rem', padding: '0.75rem 1.5rem', background: '#3498db', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
           >
-            Back to Search
+            {role === 'admin' ? '← Back to Dashboard' : '← Back to Search'}
           </button>
         </div>
       </div>
@@ -148,10 +162,10 @@ const ArtisanDetailsPage = () => {
         <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>
           <h2>Artisan not found</h2>
           <button 
-            onClick={() => navigate('/crafts')} 
+            onClick={() => navigate(role === 'admin' ? '/admin-dashboard' : '/crafts')} 
             style={{ marginTop: '1rem', padding: '0.75rem 1.5rem', background: '#3498db', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
           >
-            Back to Search
+            {role === 'admin' ? '← Back to Dashboard' : '← Back to Search'}
           </button>
         </div>
       </div>
@@ -188,13 +202,123 @@ const ArtisanDetailsPage = () => {
     );
   };
 
+  const handleDeletePortfolio = async (imageUrl) => {
+    if (!window.confirm('Are you sure you want to delete this portfolio image?')) {
+      return;
+    }
+
+    try {
+      setDeletingImage(imageUrl);
+      await deletePortfolioImage(id, imageUrl);
+      
+      // Update local state to remove the image
+      setArtisan(prev => ({
+        ...prev,
+        portfolioImages: prev.portfolioImages.filter(img => img !== imageUrl)
+      }));
+      
+      alert('Portfolio image deleted successfully!');
+    } catch (err) {
+      console.error('Failed to delete portfolio image:', err);
+      alert('Failed to delete portfolio image: ' + err.message);
+    } finally {
+      setDeletingImage(null);
+    }
+  };
+
+  // Handle opening order modal
+  const handleOpenOrderModal = (portfolioItem, index) => {
+    if (!isLoggedIn) {
+      alert('Please login to place an order');
+      navigate('/login');
+      return;
+    }
+    
+    if (role === 'artisan') {
+      alert('Artisans cannot place orders. Please login as a customer.');
+      return;
+    }
+    
+    setSelectedPortfolioItem({
+      ...portfolioItem,
+      index
+    });
+    setOrderQuantity(1);
+    setOrderDescription('');
+    setOrderError(null);
+    setOrderSuccess(null);
+    setIsOrderModalOpen(true);
+  };
+
+  // Handle closing order modal
+  const handleCloseOrderModal = () => {
+    setIsOrderModalOpen(false);
+    setSelectedPortfolioItem(null);
+    setOrderQuantity(1);
+    setOrderDescription('');
+    setOrderError(null);
+    setOrderSuccess(null);
+  };
+
+  // Handle placing order
+  const handlePlaceOrder = async () => {
+    if (!selectedPortfolioItem) return;
+    
+    if (!orderDescription.trim()) {
+      setOrderError('Please provide a description for your order');
+      return;
+    }
+    
+    if (orderQuantity < 1) {
+      setOrderError('Quantity must be at least 1');
+      return;
+    }
+    
+    try {
+      setOrderLoading(true);
+      setOrderError(null);
+      
+      const imageUrl = typeof selectedPortfolioItem === 'string' 
+        ? selectedPortfolioItem 
+        : selectedPortfolioItem.imageUrl;
+      
+      const title = selectedPortfolioItem.description || `Portfolio Item ${selectedPortfolioItem.index + 1}`;
+      const itemPrice = selectedPortfolioItem.price || 0;
+      
+      const result = await ReservationController.createPortfolioOrder(
+        id, // artisanId
+        title,
+        imageUrl,
+        orderQuantity,
+        orderDescription,
+        itemPrice
+      );
+      
+      if (result.success) {
+        setOrderSuccess(result.message);
+        setTimeout(() => {
+          handleCloseOrderModal();
+          alert('Order placed successfully! You can track it in your reservations.');
+          navigate('/reservations');
+        }, 1500);
+      } else {
+        setOrderError(result.message);
+      }
+    } catch (err) {
+      console.error('Failed to place order:', err);
+      setOrderError(err.message || 'Failed to place order');
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
   return (
     <div className="craftsman-profile-page">
       <div className="container">
         {/* Header Section */}
         <div className="profile-header">
-          <button onClick={() => navigate('/crafts')} className="btn-back">
-            ← Back to Search
+          <button onClick={() => navigate(role === 'admin' ? '/admin-dashboard' : '/crafts')} className="btn-back">
+            {role === 'admin' ? '← Back to Dashboard' : '← Back to Search'}
           </button>
           
           <div className="profile-hero">
@@ -216,7 +340,7 @@ const ArtisanDetailsPage = () => {
                 <div className="stat">
                   <span className="stat-icon">⭐</span>
                   <div>
-                    <strong>{artisan.averageRating.toFixed(1)}</strong>
+                    <strong>{artisan.averageRating ? artisan.averageRating.toFixed(1) : '0.0'}</strong>
                     <small>Rating</small>
                   </div>
                 </div>
@@ -303,24 +427,115 @@ const ArtisanDetailsPage = () => {
           <h2>🎨 Portfolio</h2>
           {artisan.portfolioImages && artisan.portfolioImages.length > 0 ? (
             <div className="portfolio-grid">
-              {artisan.portfolioImages.map((imageUrl, index) => (
-                <div key={index} className="portfolio-item">
-                  <div className="portfolio-image">
-                    <img 
-                      src={
-                        imageUrl.startsWith('http') 
-                          ? imageUrl 
-                          : `http://localhost:5000${imageUrl}`
-                      }
-                      alt={`Portfolio ${index + 1}`}
-                      onError={(e) => {
-                        console.error('❌ Failed to load portfolio image:', e.target.src);
-                        e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
-                      }}
-                    />
+              {artisan.portfolioImages.map((item, index) => {
+                // Handle both old format (just URL string) and new format (object with imageUrl, price, description)
+                const imageUrl = typeof item === 'string' ? item : item.imageUrl;
+                const price = typeof item === 'object' ? item.price : null;
+                const description = typeof item === 'object' ? item.description : null;
+                
+                return (
+                  <div key={index} className="portfolio-item" style={{ position: 'relative' }}>
+                    {role === 'admin' && (
+                      <button
+                        onClick={() => handleDeletePortfolio(imageUrl)}
+                        disabled={deletingImage === imageUrl}
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          background: '#e74c3c',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '32px',
+                          height: '32px',
+                          cursor: deletingImage === imageUrl ? 'not-allowed' : 'pointer',
+                          fontSize: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 10,
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                          transition: 'all 0.3s ease',
+                          opacity: deletingImage === imageUrl ? 0.6 : 1
+                        }}
+                        onMouseEnter={(e) => {
+                          if (deletingImage !== imageUrl) {
+                            e.target.style.background = '#c0392b';
+                            e.target.style.transform = 'scale(1.1)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = '#e74c3c';
+                          e.target.style.transform = 'scale(1)';
+                        }}
+                        title="Delete portfolio image"
+                      >
+                        {deletingImage === imageUrl ? '⏳' : '🗑️'}
+                      </button>
+                    )}
+                    <div className="portfolio-image">
+                      <img 
+                        src={
+                          imageUrl.startsWith('http') 
+                            ? imageUrl 
+                            : `http://localhost:5000${imageUrl}`
+                        }
+                        alt={description || `Portfolio ${index + 1}`}
+                        onError={(e) => {
+                          console.error('❌ Failed to load portfolio image:', e.target.src);
+                          e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Portfolio Item Details and Order Button */}
+                    <div style={{ padding: '0.75rem', background: 'white', borderRadius: '8px', border: '1px solid #e1e8ed', marginTop: '0.5rem' }}>
+                      {/* Display price if available */}
+                      {price && (
+                        <div style={{ marginBottom: '0.5rem' }}>
+                          <strong style={{ color: '#27ae60', fontSize: '1.2rem' }}>
+                            ${price}
+                          </strong>
+                        </div>
+                      )}
+                      
+                      {/* Display description if available */}
+                      {description && (
+                        <p style={{ margin: 0, color: '#2c3e50', fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '0.75rem' }}>
+                          {description}
+                        </p>
+                      )}
+                      
+                      {/* Order Button - ALWAYS VISIBLE */}
+                      <button
+                        onClick={() => handleOpenOrderModal(item, index)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          background: '#3498db',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '1rem',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          transition: 'background 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          marginTop: (price || description) ? '0.75rem' : '0'
+                        }}
+                        onMouseEnter={(e) => e.target.style.background = '#2980b9'}
+                        onMouseLeave={(e) => e.target.style.background = '#3498db'}
+                      >
+                        🛒 Order This Item
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="empty-state">
@@ -332,9 +547,8 @@ const ArtisanDetailsPage = () => {
         </div>
 
         {/* Reviews Section */}
-        <div className="profile-section" style={{ border: '3px solid red', minHeight: '200px' }}>
+        <div className="profile-section">
           <h2>⭐ Customer Reviews ({reviews.length})</h2>
-          <p style={{ color: 'red', fontWeight: 'bold' }}>DEBUG: Reviews section is rendering. Reviews count: {reviews.length}</p>
           {reviewsLoading ? (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
               <p>Loading reviews...</p>
@@ -402,11 +616,178 @@ const ArtisanDetailsPage = () => {
             </div>
             <div className="detail-card">
               <strong>Average Rating</strong>
-              <span className="detail-value">⭐ {artisan.averageRating.toFixed(1)}</span>
+              <span className="detail-value">⭐ {artisan.averageRating ? artisan.averageRating.toFixed(1) : '0.0'}</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Order Modal */}
+      {isOrderModalOpen && selectedPortfolioItem && (
+        <div className="modal-overlay" onClick={handleCloseOrderModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h2>🛒 Place Order</h2>
+              <button onClick={handleCloseOrderModal} className="btn-close-modal">
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ padding: '1.5rem' }}>
+              {orderError && (
+                <div className="error-message" style={{ marginBottom: '1rem', background: '#ffe5e5', color: '#e74c3c', padding: '1rem', borderRadius: '8px' }}>
+                  ❌ {orderError}
+                </div>
+              )}
+              
+              {orderSuccess && (
+                <div className="success-message" style={{ marginBottom: '1rem', background: '#d4edda', color: '#155724', padding: '1rem', borderRadius: '8px' }}>
+                  ✅ {orderSuccess}
+                </div>
+              )}
+              
+              {/* Portfolio Item Preview */}
+              <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+                <img 
+                  src={
+                    (typeof selectedPortfolioItem === 'string' ? selectedPortfolioItem : selectedPortfolioItem.imageUrl).startsWith('http')
+                      ? (typeof selectedPortfolioItem === 'string' ? selectedPortfolioItem : selectedPortfolioItem.imageUrl)
+                      : `http://localhost:5000${typeof selectedPortfolioItem === 'string' ? selectedPortfolioItem : selectedPortfolioItem.imageUrl}`
+                  }
+                  alt="Portfolio item"
+                  style={{ 
+                    maxWidth: '100%',
+                    maxHeight: '300px',
+                    borderRadius: '8px',
+                    border: '2px solid #667eea'
+                  }}
+                />
+                {selectedPortfolioItem.price && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <strong style={{ color: '#27ae60', fontSize: '1.5rem' }}>
+                      ${selectedPortfolioItem.price} per item
+                    </strong>
+                  </div>
+                )}
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label htmlFor="orderQuantity" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#2c3e50' }}>
+                  Quantity *
+                </label>
+                <input
+                  type="number"
+                  id="orderQuantity"
+                  min="1"
+                  value={orderQuantity}
+                  onChange={(e) => setOrderQuantity(parseInt(e.target.value) || 1)}
+                  disabled={orderLoading}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label htmlFor="orderDescription" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#2c3e50' }}>
+                  Order Details / Special Instructions *
+                </label>
+                <textarea
+                  id="orderDescription"
+                  value={orderDescription}
+                  onChange={(e) => setOrderDescription(e.target.value)}
+                  placeholder="Describe your requirements, delivery location, or any special instructions..."
+                  rows="4"
+                  disabled={orderLoading}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    resize: 'vertical'
+                  }}
+                ></textarea>
+              </div>
+              
+              {selectedPortfolioItem.price && (
+                <div style={{ 
+                  background: '#f8f9fa', 
+                  padding: '1rem', 
+                  borderRadius: '8px', 
+                  marginBottom: '1.5rem',
+                  border: '1px solid #dee2e6'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span>Price per item:</span>
+                    <strong>${selectedPortfolioItem.price}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span>Quantity:</span>
+                    <strong>{orderQuantity}</strong>
+                  </div>
+                  <hr style={{ margin: '0.5rem 0', border: 'none', borderTop: '1px solid #dee2e6' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem' }}>
+                    <strong>Estimated Total:</strong>
+                    <strong style={{ color: '#27ae60' }}>
+                      ${(selectedPortfolioItem.price * orderQuantity).toFixed(2)}
+                    </strong>
+                  </div>
+                  <small style={{ color: '#666', display: 'block', marginTop: '0.5rem' }}>
+                    * Final price will be agreed upon with the artisan
+                  </small>
+                </div>
+              )}
+              
+              <div className="modal-actions" style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={handleCloseOrderModal}
+                  className="btn-cancel"
+                  disabled={orderLoading}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    cursor: orderLoading ? 'not-allowed' : 'pointer',
+                    opacity: orderLoading ? 0.6 : 1
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePlaceOrder}
+                  className="btn-save"
+                  disabled={orderLoading || !orderDescription.trim()}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: orderLoading || !orderDescription.trim() ? '#95a5a6' : '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    cursor: (orderLoading || !orderDescription.trim()) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {orderLoading ? 'Placing Order...' : 'Place Order'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

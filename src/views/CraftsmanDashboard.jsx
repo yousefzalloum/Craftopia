@@ -96,7 +96,7 @@ const CraftsmanDashboard = () => {
       setIsLoadingJobs(true);
       setJobsError(null);
       
-      const data = await apiRequest('/reservations/incoming-jobs', {
+      const data = await apiRequest('/reservations/artisan', {
         method: 'GET'
       });
 
@@ -270,12 +270,6 @@ const CraftsmanDashboard = () => {
           </div>
           
           <div className="dashboard-actions">
-            <button 
-              className={`btn-availability ${craftsman.availability ? 'active' : 'inactive'}`}
-              onClick={handleToggleAvailability}
-            >
-              {craftsman.availability ? '✓ Available' : '✗ Unavailable'}
-            </button>
             <button 
               className="btn-settings"
               onClick={() => setShowTimeSettings(!showTimeSettings)}
@@ -470,105 +464,6 @@ const CraftsmanDashboard = () => {
               </div>
             );
           })()}
-        </div>
-
-        {/* Legacy Bookings Section */}
-        <div className="bookings-section legacy-bookings">
-          <div className="section-header">
-            <h2>📋 My Bookings (Legacy)</h2>
-            <div className="filter-buttons">
-              <button 
-                className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
-                onClick={() => setFilterStatus('all')}
-              >
-                All ({bookings.length})
-              </button>
-              <button 
-                className={`filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
-                onClick={() => setFilterStatus('pending')}
-              >
-                Pending ({bookings.filter(b => b.status === 'pending').length})
-              </button>
-              <button 
-                className={`filter-btn ${filterStatus === 'confirmed' ? 'active' : ''}`}
-                onClick={() => setFilterStatus('confirmed')}
-              >
-                Confirmed ({bookings.filter(b => b.status === 'confirmed').length})
-              </button>
-              <button 
-                className={`filter-btn ${filterStatus === 'completed' ? 'active' : ''}`}
-                onClick={() => setFilterStatus('completed')}
-              >
-                Completed ({bookings.filter(b => b.status === 'completed').length})
-              </button>
-            </div>
-          </div>
-
-          <div className="bookings-list">
-            {filteredBookings.length > 0 ? (
-              filteredBookings.map((booking) => {
-                const { craft } = getReservationWithCraft(booking);
-                return (
-                  <div key={booking.id} className="craftsman-booking-card">
-                    <div className="booking-header">
-                      <div className="booking-info">
-                        <h3>{booking.reservationType === 'maintenance' ? '🔧 Maintenance Service' : craft?.name || 'Craft Reservation'}</h3>
-                        <span className={`status-badge status-${booking.status}`}>
-                          {booking.status}
-                        </span>
-                      </div>
-                      <div className="booking-date">
-                        {booking.reservationType === 'maintenance' 
-                          ? `${booking.startDate} at ${booking.appointmentTime}`
-                          : `${booking.startDate} - ${booking.endDate}`
-                        }
-                      </div>
-                    </div>
-
-                    <div className="booking-details">
-                      <p><strong>Customer:</strong> {booking.userName}</p>
-                      <p><strong>Email:</strong> {booking.userEmail}</p>
-                      {booking.reservationType === 'maintenance' && (
-                        <>
-                          <p><strong>Address:</strong> {booking.serviceAddress}</p>
-                          <p><strong>Description:</strong> {booking.serviceDescription}</p>
-                        </>
-                      )}
-                      <p><strong>Price:</strong> ${booking.totalPrice}</p>
-                      <p><strong>Booked on:</strong> {booking.createdAt}</p>
-                    </div>
-
-                    {booking.status === 'pending' && (
-                      <div className="booking-actions">
-                        <button 
-                          className="btn-accept"
-                          onClick={() => handleAcceptBooking(booking.id)}
-                        >
-                          ✓ Accept
-                        </button>
-                        <button 
-                          className="btn-reject"
-                          onClick={() => handleRejectBooking(booking.id)}
-                        >
-                          ✕ Reject
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <div className="no-bookings">
-                <div className="no-bookings-icon">📭</div>
-                <h3>No bookings found</h3>
-                <p>
-                  {filterStatus === 'all' 
-                    ? "You don't have any bookings yet." 
-                    : `You don't have any ${filterStatus} bookings.`}
-                </p>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

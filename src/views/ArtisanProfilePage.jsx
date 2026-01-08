@@ -18,6 +18,7 @@ const ArtisanProfilePage = () => {
   const [error, setError] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
   
   // Edit profile states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -38,9 +39,12 @@ const ArtisanProfilePage = () => {
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
   const [portfolioFile, setPortfolioFile] = useState(null);
   const [portfolioPreview, setPortfolioPreview] = useState(null);
+  const [portfolioPrice, setPortfolioPrice] = useState('');
+  const [portfolioDescription, setPortfolioDescription] = useState('');
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [portfolioError, setPortfolioError] = useState(null);
   const [portfolioSuccess, setPortfolioSuccess] = useState(null);
+  const [portfolioComments, setPortfolioComments] = useState({});
 
   useEffect(() => {
     // Check authentication
@@ -81,8 +85,8 @@ const ArtisanProfilePage = () => {
       try {
         setReviewsLoading(true);
         console.log('📋 Fetching reviews for artisan:', profileData._id);
-        console.log('📋 Using endpoint: /reviews/artisan/' + profileData._id);
-        const data = await get(`/reviews/artisan/${profileData._id}`);
+        console.log('📋 Using endpoint: /reviews/' + profileData._id);
+        const data = await get(`/reviews/${profileData._id}`);
         console.log('✅ Reviews fetched - RAW DATA:', data);
         console.log('✅ Is Array?', Array.isArray(data));
         console.log('✅ Data type:', typeof data);
@@ -107,6 +111,38 @@ const ArtisanProfilePage = () => {
 
     if (profileData) {
       fetchReviews();
+    }
+  }, [profileData]);
+
+  // Fetch comments for portfolio images
+  useEffect(() => {
+    const fetchAllPortfolioComments = async () => {
+      if (!profileData || !profileData.portfolioImages || profileData.portfolioImages.length === 0) return;
+      
+      try {
+        console.log('📝 Fetching comments for portfolio images...');
+        const commentsData = {};
+        
+        for (let i = 0; i < profileData.portfolioImages.length; i++) {
+          const imageUrl = profileData.portfolioImages[i];
+          try {
+            const comments = await get(`/portfolio/comments?imageUrl=${encodeURIComponent(imageUrl)}`);
+            commentsData[i] = Array.isArray(comments) ? comments : [];
+            console.log(`✅ Fetched ${commentsData[i].length} comments for image ${i}`);
+          } catch (err) {
+            console.error(`❌ Failed to fetch comments for image ${i}:`, err);
+            commentsData[i] = [];
+          }
+        }
+        
+        setPortfolioComments(commentsData);
+      } catch (err) {
+        console.error('❌ Failed to fetch portfolio comments:', err);
+      }
+    };
+
+    if (profileData) {
+      fetchAllPortfolioComments();
     }
   }, [profileData]);
 
@@ -289,6 +325,8 @@ const ArtisanProfilePage = () => {
     setIsPortfolioModalOpen(true);
     setPortfolioFile(null);
     setPortfolioPreview(null);
+    setPortfolioPrice('');
+    setPortfolioDescription('');
     setPortfolioError(null);
     setPortfolioSuccess(null);
   };
@@ -298,6 +336,8 @@ const ArtisanProfilePage = () => {
     setIsPortfolioModalOpen(false);
     setPortfolioFile(null);
     setPortfolioPreview(null);
+    setPortfolioPrice('');
+    setPortfolioDescription('');
     setPortfolioError(null);
     setPortfolioSuccess(null);
   };
@@ -337,19 +377,37 @@ const ArtisanProfilePage = () => {
       setPortfolioError('Please select an image first');
       return;
     }
+    
+    if (!portfolioPrice || portfolioPrice <= 0) {
+      setPortfolioError('Please enter a valid price');
+      return;
+    }
+    
+    if (!portfolioDescription.trim()) {
+      setPortfolioError('Please enter a description');
+      return;
+    }
 
     try {
       setPortfolioLoading(true);
       setPortfolioError(null);
       
-      console.log('🎨 Uploading portfolio image...');
-      const response = await uploadPortfolioImage(portfolioFile);
+      console.log('🎨 Uploading portfolio image with price and description...');
+      const response = await uploadPortfolioImage(portfolioFile, portfolioPrice, portfolioDescription);
       
       console.log('✅ Portfolio upload successful:', response);
       
-      // Refresh profile to get updated portfolio
-      const refreshedProfile = await getArtisanProfile();
-      setProfileData(refreshedProfile);
+      // Update profile data with new portfolio from response
+      if (response.portfolio) {
+        setProfileData(prev => ({
+          ...prev,
+          portfolioImages: response.portfolio
+        }));
+      } else {
+        // Fallback: refresh profile to get updated portfolio
+        const refreshedProfile = await getArtisanProfile();
+        setProfileData(refreshedProfile);
+      }
       
       setPortfolioSuccess('Portfolio image added successfully!');
       
@@ -440,7 +498,7 @@ const ArtisanProfilePage = () => {
                 <div className="stat">
                   <span className="stat-icon">⭐</span>
                   <div>
-                    <strong>{profileData.averageRating.toFixed(1)}</strong>
+                    <strong>{profileData.averageRating ? profileData.averageRating.toFixed(1) : '0.0'}</strong>
                     <small>Rating</small>
                   </div>
                 </div>
@@ -516,56 +574,143 @@ const ArtisanProfilePage = () => {
           </div>
           {profileData.portfolioImages && profileData.portfolioImages.length > 0 ? (
             <div className="portfolio-grid">
-              {profileData.portfolioImages.map((imageUrl, index) => (
-                <div key={index} className="portfolio-item">
-                  <div className="portfolio-image" style={{ position: 'relative' }}>
-                    <img 
-                      src={
-                        imageUrl.startsWith('http') 
-                          ? imageUrl 
-                          : `http://localhost:5000${imageUrl}`
-                      }
-                      alt={`Portfolio ${index + 1}`}
-                      onError={(e) => {
-                        console.error('❌ Failed to load portfolio image:', e.target.src);
-                        e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
-                      }}
-                    />
-                    <button
-                      onClick={() => handleDeletePortfolioImage(imageUrl)}
-                      style={{
-                        position: 'absolute',
-                        top: '0.5rem',
-                        right: '0.5rem',
-                        background: '#e74c3c',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '32px',
-                        height: '32px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.2rem',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.background = '#c0392b';
-                        e.target.style.transform = 'scale(1.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.background = '#e74c3c';
-                        e.target.style.transform = 'scale(1)';
-                      }}
-                      title="Delete image"
-                    >
-                      🗑️
-                    </button>
+              {profileData.portfolioImages.map((item, index) => {
+                // Handle both old format (just URL string) and new format (object with imageUrl, price, description)
+                const imageUrl = typeof item === 'string' ? item : item.imageUrl;
+                const price = typeof item === 'object' ? item.price : null;
+                const description = typeof item === 'object' ? item.description : null;
+                const itemId = typeof item === 'object' ? item._id : null;
+                
+                return (
+                  <div key={itemId || index} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div className="portfolio-item">
+                      <div className="portfolio-image" style={{ position: 'relative' }}>
+                        <img 
+                          src={
+                            imageUrl.startsWith('http') 
+                              ? imageUrl 
+                              : `http://localhost:5000${imageUrl}`
+                          }
+                          alt={description || `Portfolio ${index + 1}`}
+                          onError={(e) => {
+                            console.error('❌ Failed to load portfolio image:', e.target.src);
+                            e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                          }}
+                        />
+                      <button
+                        onClick={() => handleDeletePortfolioImage(imageUrl)}
+                        style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          right: '0.5rem',
+                          background: '#e74c3c',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '32px',
+                          height: '32px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.2rem',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = '#c0392b';
+                          e.target.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = '#e74c3c';
+                          e.target.style.transform = 'scale(1)';
+                        }}
+                        title="Delete image"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                    
+                    {/* Display price and description if available */}
+                    {(price || description) && (
+                      <div style={{ padding: '0.75rem', background: 'white', borderRadius: '8px', border: '1px solid #e1e8ed' }}>
+                        {price && (
+                          <div style={{ marginBottom: '0.5rem' }}>
+                            <strong style={{ color: '#27ae60', fontSize: '1.2rem' }}>
+                              ${price}
+                            </strong>
+                          </div>
+                        )}
+                        {description && (
+                          <p style={{ margin: 0, color: '#2c3e50', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                            {description}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Display customer comments */}
+                  {portfolioComments[index] && portfolioComments[index].length > 0 && (
+                    <div style={{ padding: '0.75rem', background: '#f8f9fa', borderRadius: '8px' }}>
+                      <h4 style={{ fontSize: '0.95rem', marginBottom: '0.75rem', color: '#2c3e50' }}>
+                        💬 Customer Comments ({portfolioComments[index].length})
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {portfolioComments[index].map((comment) => (
+                          <div 
+                            key={comment._id} 
+                            style={{
+                              padding: '0.75rem',
+                              background: 'white',
+                              border: '1px solid #e1e8ed',
+                              borderRadius: '8px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                              <img 
+                                src={
+                                  comment.customer.profilePicture?.startsWith('http') 
+                                    ? comment.customer.profilePicture
+                                    : `http://localhost:5000${comment.customer.profilePicture}`
+                                }
+                                alt={comment.customer.name}
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  objectFit: 'cover'
+                                }}
+                                onError={(e) => {
+                                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.customer.name)}&background=3498db&color=fff&size=32`;
+                                }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem', color: '#2c3e50' }}>
+                                  {comment.customer.name}
+                                </p>
+                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#7f8c8d' }}>
+                                  {new Date(comment.createdAt).toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric', 
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#34495e', lineHeight: '1.5' }}>
+                              {comment.comment}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           ) : (
             <div className="empty-state">
@@ -584,41 +729,65 @@ const ArtisanProfilePage = () => {
               <p>Loading reviews...</p>
             </div>
           ) : reviews.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {reviews.map((review) => (
-                <div 
-                  key={review._id} 
-                  style={{
-                    background: '#f8f9fa',
-                    padding: '1.5rem',
-                    borderRadius: '12px',
-                    border: '1px solid #dee2e6'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                        <strong style={{ fontSize: '1.1rem', color: '#2c3e50' }}>
-                          {review.customer?.name || 'Customer'}
-                        </strong>
-                        {renderStars(review.stars_number)}
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {(showAllReviews ? reviews : reviews.slice(-1)).map((review) => (
+                  <div 
+                    key={review._id} 
+                    style={{
+                      background: '#f8f9fa',
+                      padding: '1.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #dee2e6'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                          <strong style={{ fontSize: '1.1rem', color: '#2c3e50' }}>
+                            {review.customer?.name || 'Customer'}
+                          </strong>
+                          {renderStars(review.stars_number)}
+                        </div>
+                        <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: 0 }}>
+                          {formatReviewDate(review.review_date)}
+                        </p>
                       </div>
-                      <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: 0 }}>
-                        {formatReviewDate(review.review_date)}
-                      </p>
                     </div>
+                    <p style={{ 
+                      color: '#2c3e50', 
+                      lineHeight: '1.6', 
+                      margin: 0,
+                      fontSize: '1rem'
+                    }}>
+                      {review.comment}
+                    </p>
                   </div>
-                  <p style={{ 
-                    color: '#2c3e50', 
-                    lineHeight: '1.6', 
-                    margin: 0,
-                    fontSize: '1rem'
-                  }}>
-                    {review.comment}
-                  </p>
+                ))}
+              </div>
+              {reviews.length > 1 && (
+                <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                  <button 
+                    onClick={() => setShowAllReviews(!showAllReviews)}
+                    style={{
+                      padding: '0.75rem 2rem',
+                      background: '#3498db',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = '#2980b9'}
+                    onMouseLeave={(e) => e.target.style.background = '#3498db'}
+                  >
+                    {showAllReviews ? '← Show Less' : `Show More (${reviews.length - 1} more reviews) →`}
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           ) : (
             <div className="empty-state">
               <div className="empty-icon">💬</div>
@@ -646,7 +815,7 @@ const ArtisanProfilePage = () => {
             </div>
             <div className="detail-card">
               <strong>Average Rating</strong>
-              <span className="detail-value">⭐ {profileData.averageRating.toFixed(1)}</span>
+              <span className="detail-value">⭐ {profileData.averageRating ? profileData.averageRating.toFixed(1) : '0.0'}</span>
             </div>
           </div>
         </div>
@@ -815,7 +984,7 @@ const ArtisanProfilePage = () => {
               )}
               
               <div className="form-group">
-                <label htmlFor="portfolioImage">Select Image</label>
+                <label htmlFor="portfolioImage">Select Image *</label>
                 <input
                   type="file"
                   id="portfolioImage"
@@ -842,6 +1011,47 @@ const ArtisanProfilePage = () => {
                 </small>
               </div>
               
+              <div className="form-group">
+                <label htmlFor="portfolioPrice">Price ($) *</label>
+                <input
+                  type="number"
+                  id="portfolioPrice"
+                  min="0"
+                  step="0.01"
+                  value={portfolioPrice}
+                  onChange={(e) => setPortfolioPrice(e.target.value)}
+                  placeholder="Enter price"
+                  disabled={portfolioLoading}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="portfolioDescription">Description *</label>
+                <textarea
+                  id="portfolioDescription"
+                  value={portfolioDescription}
+                  onChange={(e) => setPortfolioDescription(e.target.value)}
+                  placeholder="Describe your work..."
+                  rows="3"
+                  disabled={portfolioLoading}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    resize: 'vertical'
+                  }}
+                ></textarea>
+              </div>
+              
               <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
                 <button
                   type="button"
@@ -855,10 +1065,10 @@ const ArtisanProfilePage = () => {
                   type="button"
                   onClick={handlePortfolioUpload}
                   className="btn-save"
-                  disabled={portfolioLoading || !portfolioFile}
+                  disabled={portfolioLoading || !portfolioFile || !portfolioPrice || !portfolioDescription}
                   style={{
-                    opacity: (!portfolioFile || portfolioLoading) ? 0.6 : 1,
-                    cursor: (!portfolioFile || portfolioLoading) ? 'not-allowed' : 'pointer'
+                    opacity: (!portfolioFile || portfolioLoading || !portfolioPrice || !portfolioDescription) ? 0.6 : 1,
+                    cursor: (!portfolioFile || portfolioLoading || !portfolioPrice || !portfolioDescription) ? 'not-allowed' : 'pointer'
                   }}
                 >
                   {portfolioLoading ? 'Uploading...' : 'Upload'}

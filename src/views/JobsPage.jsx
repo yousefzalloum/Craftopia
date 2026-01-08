@@ -6,7 +6,7 @@ import '../styles/JobsPage.css';
 
 /**
  * JobsPage - Displays incoming jobs for artisans
- * Fetches and displays reservations from /reservations/incoming-jobs
+ * Fetches and displays reservations from /reservations/artisan
  */
 const JobsPage = () => {
   const { token } = useAuth();
@@ -16,6 +16,9 @@ const JobsPage = () => {
   const [processingJobId, setProcessingJobId] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [priceModalOpen, setPriceModalOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [proposedPrice, setProposedPrice] = useState('');
 
   useEffect(() => {
     fetchIncomingJobs();
@@ -26,7 +29,7 @@ const JobsPage = () => {
       setIsLoading(true);
       setError(null);
       
-      const data = await apiRequest('/reservations/incoming-jobs', {
+      const data = await apiRequest('/reservations/artisan', {
         method: 'GET'
       });
 
@@ -68,6 +71,48 @@ const JobsPage = () => {
     handleStatusUpdate(jobId, 'Rejected');
   };
 
+  const handleSetPrice = (job) => {
+    setSelectedJob(job);
+    setProposedPrice('');
+    setPriceModalOpen(true);
+  };
+
+  const handleSubmitPrice = async () => {
+    if (!selectedJob || !proposedPrice) {
+      alert('Please enter a valid price');
+      return;
+    }
+
+    const price = parseFloat(proposedPrice);
+    if (isNaN(price) || price <= 0) {
+      alert('Please enter a valid price greater than 0');
+      return;
+    }
+
+    try {
+      setProcessingJobId(selectedJob._id);
+      
+      await apiRequest(`/reservations/${selectedJob._id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ price: proposedPrice })
+      });
+
+      console.log(`✅ Price $${proposedPrice} proposed for job ${selectedJob._id}`);
+      
+      setPriceModalOpen(false);
+      setSelectedJob(null);
+      setProposedPrice('');
+      
+      // Refresh jobs list
+      await fetchIncomingJobs();
+    } catch (err) {
+      console.error('❌ Error proposing price:', err);
+      alert(`Failed to propose price: ${err.message}`);
+    } finally {
+      setProcessingJobId(null);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -82,17 +127,28 @@ const JobsPage = () => {
 
   const getStatusBadge = (status) => {
     const statusClasses = {
-      pending: 'status-badge status-pending',
-      confirmed: 'status-badge status-confirmed',
-      completed: 'status-badge status-completed',
-      cancelled: 'status-badge status-cancelled'
+      Pending: 'status-badge status-pending',
+      Price_Proposed: 'status-badge status-warning',
+      Negotiating: 'status-badge status-negotiating',
+      Accepted: 'status-badge status-confirmed',
+      Rejected: 'status-badge status-cancelled',
+      Completed: 'status-badge status-completed',
+      Cancelled: 'status-badge status-cancelled'
+    };
+
+    const statusLabels = {
+      Price_Proposed: 'Price Proposed'
     };
 
     return (
       <span className={statusClasses[status] || 'status-badge'}>
-        {status}
+        {statusLabels[status] || status}
       </span>
     );
+  };
+
+  const getJobTypeIcon = (jobType) => {
+    return jobType === 'Order' ? '📦' : '🔧';
   };
 
   if (isLoading) {
@@ -129,6 +185,24 @@ const JobsPage = () => {
             All ({jobs.length})
           </button>
           <button 
+            className={`filter-btn ${filterStatus === 'Pending' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('Pending')}
+          >
+            Pending ({jobs.filter(j => j.status === 'Pending').length})
+          </button>
+          <button 
+            className={`filter-btn ${filterStatus === 'Price_Proposed' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('Price_Proposed')}
+          >
+            Price Proposed ({jobs.filter(j => j.status === 'Price_Proposed').length})
+          </button>
+          <button 
+            className={`filter-btn ${filterStatus === 'Negotiating' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('Negotiating')}
+          >
+            Negotiating ({jobs.filter(j => j.status === 'Negotiating').length})
+          </button>
+          <button 
             className={`filter-btn ${filterStatus === 'Accepted' ? 'active' : ''}`}
             onClick={() => setFilterStatus('Accepted')}
           >
@@ -152,7 +226,7 @@ const JobsPage = () => {
           <input
             type="text"
             className="search-input"
-            placeholder="🔍 Search by name, email, phone, or description..."
+            placeholder="🔍 Search by customer name or title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -178,13 +252,11 @@ const JobsPage = () => {
           const query = searchQuery.toLowerCase();
           filteredJobs = filteredJobs.filter(job => {
             const customerName = (job.customer?.name || '').toLowerCase();
-            const customerEmail = (job.customer?.email || '').toLowerCase();
-            const customerPhone = (job.customer?.phone_number || '').toLowerCase();
+            const title = (job.title || '').toLowerCase();
             const description = (job.description || '').toLowerCase();
             
             return customerName.includes(query) ||
-                   customerEmail.includes(query) ||
-                   customerPhone.includes(query) ||
+                   title.includes(query) ||
                    description.includes(query);
           });
         }
@@ -210,11 +282,12 @@ const JobsPage = () => {
             <table className="jobs-table">
               <thead>
                 <tr>
-                  <th>Customer Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
+                  <th>Type</th>
+                  <th>Title</th>
+                  <th>Customer Info</th>
                   <th>Description</th>
-                  <th>Start Date</th>
+                  <th>Qty</th>
+                  <th>Deadline</th>
                   <th>Status</th>
                   <th>Price</th>
                   <th>Created</th>
@@ -224,17 +297,84 @@ const JobsPage = () => {
               <tbody>
                 {filteredJobs.map((job) => (
                 <tr key={job._id}>
-                  <td className="customer-name">{job.customer?.name || 'N/A'}</td>
-                  <td className="customer-email">{job.customer?.email || 'N/A'}</td>
-                  <td className="customer-phone">{job.customer?.phone_number || 'N/A'}</td>
-                  <td className="job-description">{job.description || 'No description'}</td>
-                  <td className="job-date">{formatDate(job.start_date)}</td>
+                  <td className="job-type">
+                    <span style={{ fontSize: '1.5rem' }}>{getJobTypeIcon(job.job_type)}</span>
+                    <br />
+                    <small>{job.job_type === 'Order' ? 'Order' : 'Request'}</small>
+                  </td>
+                  <td className="job-title">
+                    <strong style={{ fontSize: '1rem' }}>{job.title || 'N/A'}</strong>
+                    {job.reference_image && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <img 
+                          src={job.reference_image.startsWith('http') ? job.reference_image : `http://localhost:5000${job.reference_image}`}
+                          alt="Reference"
+                          style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e1e8ed' }}
+                        />
+                      </div>
+                    )}
+                  </td>
+                  <td className="customer-info">
+                    <div style={{ minWidth: '150px' }}>
+                      <div style={{ marginBottom: '0.25rem' }}>
+                        <strong style={{ color: '#2c3e50' }}>👤 {job.customer?.name || 'N/A'}</strong>
+                      </div>
+                      <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                        📧 {job.customer?.email || 'N/A'}
+                      </div>
+                      {job.customer?.phone_number && (
+                        <div style={{ color: '#27ae60', fontSize: '0.85rem', fontWeight: '500' }}>
+                          📱 {job.customer.phone_number}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="job-description">
+                    <div style={{ maxWidth: '250px', minWidth: '150px', whiteSpace: 'normal', wordWrap: 'break-word', fontSize: '0.9rem', color: '#34495e' }}>
+                      {job.description || 'No description'}
+                    </div>
+                  </td>
+                  <td className="job-quantity" style={{ textAlign: 'center' }}>
+                    <strong style={{ fontSize: '1.1rem' }}>{job.quantity || 1}</strong>
+                  </td>
+                  <td className="job-deadline">
+                    {job.deadline ? formatDate(job.deadline) : '—'}
+                  </td>
                   <td className="job-status">{getStatusBadge(job.status)}</td>
-                  <td className="job-price">${job.total_price?.toFixed(2) || '0.00'}</td>
-                  <td className="job-created">{formatDate(job.createdAt)}</td>
+                  <td className="job-price">
+                    {job.agreed_price && job.agreed_price > 0 ? (
+                      <strong style={{ color: '#27ae60', fontSize: '1.1rem' }}>${job.agreed_price.toFixed(2)}</strong>
+                    ) : (
+                      <span style={{ color: '#95a5a6', fontSize: '0.85rem', fontStyle: 'italic' }}>Not set</span>
+                    )}
+                  </td>
+                  <td className="job-created">
+                    <small>{formatDate(job.createdAt)}</small>
+                  </td>
                   <td className="job-actions">
-                    {job.status === 'New' ? (
+                    {job.status === 'Pending' ? (
                       <div className="action-buttons">
+                        {job.job_type === 'Custom_Request' && (!job.agreed_price || job.agreed_price === 0) ? (
+                          <button
+                            className="btn-set-price"
+                            onClick={() => handleSetPrice(job)}
+                            disabled={processingJobId === job._id}
+                            style={{
+                              background: '#f39c12',
+                              color: 'white',
+                              padding: '0.5rem 1rem',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem',
+                              fontWeight: 'bold',
+                              marginBottom: '0.5rem',
+                              width: '100%'
+                            }}
+                          >
+                            {processingJobId === job._id ? '⏳' : '💰'} Set Price
+                          </button>
+                        ) : null}
                         <button
                           className="btn-accept"
                           onClick={() => handleAccept(job._id)}
@@ -261,6 +401,101 @@ const JobsPage = () => {
         </div>
         );
       })()}
+
+      {/* Price Proposal Modal */}
+      {priceModalOpen && selectedJob && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%'
+          }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: '0 0 0.5rem 0' }}>💰 Propose Price</h2>
+              <p style={{ color: '#7f8c8d', margin: 0 }}>
+                Set a price for: <strong>{selectedJob.title}</strong>
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                Price ($) *
+              </label>
+              <input
+                type="number"
+                value={proposedPrice}
+                onChange={(e) => setProposedPrice(e.target.value)}
+                placeholder="Enter price"
+                min="1"
+                step="0.01"
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #3498db',
+                  borderRadius: '8px',
+                  fontSize: '1.2rem',
+                  fontWeight: 'bold'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={() => {
+                  setPriceModalOpen(false);
+                  setSelectedJob(null);
+                  setProposedPrice('');
+                }}
+                disabled={processingJobId === selectedJob._id}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitPrice}
+                disabled={processingJobId === selectedJob._id}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                {processingJobId === selectedJob._id ? '⏳ Submitting...' : '✓ Submit Price'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
