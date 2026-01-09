@@ -1,17 +1,25 @@
 /* Global Styles and CSS Variables */
 :root {
-  /* Color Palette - Artisan Natural Theme */
-  --primary-color: #34495e; /* ABUNDANCE - Dark Forest Green */
-  --secondary-color: #2c3e50; /* PEACEFUL - Sage Green */
-  --accent-color: #2c3e50; /* PEACEFUL - Sage Green */
-  --success-color: #2c3e50;
-  --warning-color: #AFAEB1; /* Gray */
-  --danger-color: #8F8E91;
-  --light-bg: #E8E7EA; /* Light Gray */
-  --dark-bg: #34495e; /* Dark Blue */
-  --text-primary: #1a1a1a; /* Almost Black */
-  --text-secondary: #4a4a4a; /* Dark Gray */
-  --border-color: #AFAEB1; /* Gray */
+  /* Unified Color System - 3 Colors */
+  --primary-navy: #1e3a5f;
+  --accent-orange: #e67e22;
+  --neutral-white: #ffffff;
+  --neutral-light: #f8f9fa;
+  --text-dark: #2c3e50;
+  --text-light: #7f8c8d;
+  
+  /* Deprecated - Use unified colors above */
+  --primary-color: #1e3a5f;
+  --secondary-color: #1e3a5f;
+  --accent-color: #e67e22;
+  --success-color: #e67e22;
+  --warning-color: #e67e22;
+  --danger-color: #e74c3c;
+  --light-bg: #f8f9fa;
+  --dark-bg: #1e3a5f;
+  --text-primary: #2c3e50;
+  --text-secondary: #7f8c8d;
+  --border-color: #e0e0e0;
   --white: #ffffff;
   
   /* Spacing */
@@ -93,6 +101,51 @@ a:hover {
   padding: 0 var(--spacing-md);
 }
 
+/* Page Titles - Modern Styling */
+.page-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  letter-spacing: -1px;
+  position: relative;
+  z-index: 2;
+}
+
+.page-subtitle {
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  font-weight: 400;
+  opacity: 0.95;
+  position: relative;
+  z-index: 2;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #1e3a5f;
+  text-align: center;
+  margin-bottom: 3rem;
+  position: relative;
+  padding-bottom: 1rem;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 4px;
+  background: linear-gradient(90deg, #e67e22, #d35400);
+  border-radius: 2px;
+}
+
 /* Buttons */
 button, .btn-primary, .btn-secondary, .btn-outline {
   padding: var(--spacing-sm) var(--spacing-lg);
@@ -107,14 +160,15 @@ button, .btn-primary, .btn-secondary, .btn-outline {
 }
 
 .btn-primary {
-  background-color: var(--primary-color);
+  background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
   color: var(--white);
+  box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
 }
 
 .btn-primary:hover {
-  background-color: #1a252f;
+  background: linear-gradient(135deg, #d35400 0%, #be4700 100%);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 6px 16px rgba(230, 126, 34, 0.4);
 }
 
 .btn-secondary {
@@ -123,19 +177,19 @@ button, .btn-primary, .btn-secondary, .btn-outline {
 }
 
 .btn-secondary:hover {
-  background-color: #1f2d38;
+  background-color: #245063;
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 .btn-outline {
   background-color: transparent;
-  border: 2px solid var(--primary-color);
-  color: var(--primary-color);
+  border: 2px solid #e67e22;
+  color: #e67e22;
 }
 
 .btn-outline:hover {
-  background-color: var(--primary-color);
+  background-color: #e67e22;
   color: var(--white);
 }
 
@@ -157,7 +211,8 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--accent-color);
+  border-color: #e67e22;
+  box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.1);
 }
 
 /* Utilities */

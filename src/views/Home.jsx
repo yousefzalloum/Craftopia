@@ -165,7 +165,7 @@ const Home = () => {
           <div className="about-content">
             <div className="about-text">
               <h2>Connecting Artisans with Collectors</h2>
-              <div className="header-divider" style={{ background: '#95a5a6', marginBottom: '2rem', marginLeft: 0 }}></div>
+              <div className="header-divider" style={{ background: 'linear-gradient(90deg, #e67e22, #d35400)', marginBottom: '2rem', marginLeft: 0 }}></div>
               <p>
                 Craftopia bridges the gap between skilled artisans and design enthusiasts. 
                 Every piece on our platform represents hours of dedication, traditional techniques, 
@@ -179,24 +179,30 @@ const Home = () => {
                 className="btn-secondary"
                 onClick={() => navigate('/about')}
                 style={{
-                  background: '#ecf0f1',
-                  color: '#2c3e50',
-                  border: 'none',
+                  background: '#ffffff',
+                  color: '#1e3a5f',
+                  border: '2px solid #ffffff',
                   padding: '1rem 2rem',
                   fontSize: '1rem',
-                  fontWeight: '600',
+                  fontWeight: '700',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
                   marginTop: '1rem'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.background = '#95a5a6';
+                  e.target.style.background = '#e67e22';
+                  e.target.style.color = '#ffffff';
+                  e.target.style.borderColor = '#e67e22';
                   e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 8px 16px rgba(230, 126, 34, 0.3)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.background = '#ecf0f1';
+                  e.target.style.background = '#ffffff';
+                  e.target.style.color = '#1e3a5f';
+                  e.target.style.borderColor = '#ffffff';
                   e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
                 }}
               >
                 Learn More About Us →
@@ -204,10 +210,10 @@ const Home = () => {
             </div>
             <div className="about-image">
               <img 
-                src="https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=700&h=500&fit=crop" 
+                src="https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&h=600&fit=crop&q=80" 
                 alt="Professional artisan crafting"
                 onError={(e) => {
-                  e.target.src = 'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=600';
+                  e.target.src = 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=800&h=600&fit=crop';
                 }}
               />
             </div>

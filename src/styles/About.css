@@ -4,11 +4,30 @@
 }
 
 .about-hero {
-  background: linear-gradient(135deg, var(--primary-color), var(--dark-bg));
+  background: #1e3a5f;
   color: var(--white);
-  padding: var(--spacing-xl) 0;
+  padding: 5rem 0;
   text-align: center;
   margin-bottom: var(--spacing-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.about-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="1" fill="%23ffffff" opacity="0.1"/></svg>');
+  background-size: 50px 50px;
+  animation: bgMove 20s linear infinite;
+}
+
+@keyframes bgMove {
+  from { transform: translateX(0); }
+  to { transform: translateX(50px); }
 }
 
 .about-hero .page-title {
@@ -20,7 +39,8 @@
 }
 
 .about-section {
-  padding: var(--spacing-xl) 0;
+  padding: 3rem 0;
+  background-color: #ffffff;
 }
 
 .about-content {
@@ -30,32 +50,71 @@
   align-items: center;
 }
 
+.about-text {
+  background: linear-gradient(135deg, #ffffff 0%, #f4f6f7 100%);
+  padding: 2.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(230, 126, 34, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+
+.about-text::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #e67e22, #d35400);
+  border-radius: 16px 16px 0 0;
+}
+
 .about-text h2 {
-  color: var(--primary-color);
-  margin-bottom: var(--spacing-md);
+  color: #1e3a5f;
+  margin-bottom: 1.5rem;
+  font-size: 2.2rem;
+  font-weight: 900;
 }
 
 .about-text p {
-  color: var(--text-secondary);
-  line-height: 1.8;
-  margin-bottom: var(--spacing-md);
+  color: #1e3a5f;
+  line-height: 1.9;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 400;
 }
 
 .about-image {
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(230, 126, 34, 0.1);
+  position: relative;
+}
+
+.about-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(230, 126, 34, 0.1) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.about-image:hover::after {
+  opacity: 1;
 }
 
 .about-image img {
   width: 100%;
   height: 400px;
   object-fit: cover;
-  transition: var(--transition);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.about-image img:hover {
-  transform: scale(1.05);
+.about-image:hover img {
+  transform: scale(1.08);
 }
 
 .mission-section {
@@ -71,30 +130,59 @@
 
 .mission-card {
   padding: var(--spacing-lg);
-  background-color: var(--light-bg);
-  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #ffffff 0%, #f4f6f7 100%);
+  border-radius: 16px;
   text-align: center;
-  transition: var(--transition);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid rgba(230, 126, 34, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.mission-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #e67e22, #d35400);
+  transform: scaleX(0);
+  transition: transform 0.4s ease;
+}
+
+.mission-card:hover::before {
+  transform: scaleX(1);
 }
 
 .mission-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
-  background-color: var(--white);
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(230, 126, 34, 0.2);
+  background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+  border-color: rgba(230, 126, 34, 0.3);
 }
 
 .mission-icon {
-  font-size: 3rem;
+  font-size: 3.5rem;
   margin-bottom: var(--spacing-md);
+  filter: drop-shadow(0 4px 12px rgba(230, 126, 34, 0.3));
+  transition: all 0.4s ease;
+  display: inline-block;
+}
+
+.mission-card:hover .mission-icon {
+  transform: scale(1.15) rotate(5deg);
+  filter: drop-shadow(0 8px 20px rgba(230, 126, 34, 0.5));
 }
 
 .mission-card h3 {
-  color: var(--primary-color);
-  margin-bottom: var(--spacing-sm);
+  color: #1e3a5f;
+  margin-bottom: 1rem;
+  font-weight: 700;
 }
 
 .mission-card p {
-  color: var(--text-secondary);
+  color: #2c3e50;
   line-height: 1.6;
 }
 

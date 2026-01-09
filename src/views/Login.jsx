@@ -103,50 +103,163 @@ function Login() {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-box">
-        <h1>Welcome Back</h1>
-        <p className="login-subtitle">Sign in to your account</p>
+    <div className="login-creative-container">
+      {/* Full Background with Overlay */}
+      <div className="login-background-wrapper">
+        <div className="background-image"></div>
+        <div className="background-overlay"></div>
+        <div className="animated-particles">
+          <div className="particle particle-1"></div>
+          <div className="particle particle-2"></div>
+          <div className="particle particle-3"></div>
+          <div className="particle particle-4"></div>
+          <div className="particle particle-5"></div>
+        </div>
+      </div>
 
-        {error && <div className="error-message">{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="Enter your email"
-              disabled={isLoading}
-            />
+      {/* Content Container */}
+      <div className="login-content-wrapper">
+        {/* Top Brand Section */}
+        <div className="brand-showcase">
+          <div className="brand-badge">
+            <span className="badge-icon">🔨</span>
+            <span className="badge-text">Craftopia</span>
           </div>
+          <h1 className="hero-title">
+            Connect with <span className="highlight-text">Master Artisans</span>
+          </h1>
+          <p className="hero-subtitle">
+            Discover skilled craftspeople and bring your creative projects to life
+          </p>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Enter your password"
-              disabled={isLoading}
-            />
+        {/* Floating Login Card with Features */}
+        <div className="floating-login-card">
+          <div className="card-inner">
+            {/* Login Form Section */}
+            <div className="login-form-area">
+              <div className="form-header">
+                <h2>Welcome Back</h2>
+                <p>Sign in to continue your journey</p>
+              </div>
+
+              {error && (
+                <div className="error-message">
+                  <span className="error-icon">⚠️</span>
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="login-form">
+                <div className="form-group">
+                  <label htmlFor="email">
+                    <span className="label-icon">📧</span>
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    placeholder="your@email.com"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="password">
+                    <span className="label-icon">🔒</span>
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    placeholder="Enter your password"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <button type="submit" className="btn-primary" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <span className="button-spinner"></span>
+                      Signing in...
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In</span>
+                      <span className="btn-arrow">→</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <div className="form-footer">
+                <p>Don't have an account? <Link to="/role-selection" className="signup-link">Sign up free</Link></p>
+              </div>
+            </div>
+
+            {/* Features Sidebar */}
+            <div className="features-sidebar">
+              <h3 className="sidebar-title">Why Choose Us?</h3>
+              
+              <div className="feature-list">
+                <div className="feature-mini-card">
+                  <div className="feature-icon">👨‍🔧</div>
+                  <div className="feature-content">
+                    <h4>500+ Expert Artisans</h4>
+                    <p>Verified craftspeople ready to help</p>
+                  </div>
+                </div>
+
+                <div className="feature-mini-card">
+                  <div className="feature-icon">🎨</div>
+                  <div className="feature-content">
+                    <h4>Custom Creations</h4>
+                    <p>Unique pieces crafted just for you</p>
+                  </div>
+                </div>
+
+                <div className="feature-mini-card">
+                  <div className="feature-icon">⭐</div>
+                  <div className="feature-content">
+                    <h4>4.9 Star Rating</h4>
+                    <p>Trusted by thousands of customers</p>
+                  </div>
+                </div>
+
+                <div className="feature-mini-card">
+                  <div className="feature-icon">🔥</div>
+                  <div className="feature-content">
+                    <h4>2,000+ Projects</h4>
+                    <p>Successfully completed</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="trust-badges">
+                <div className="badge-item">
+                  <span className="badge-check">✓</span>
+                  <span>Verified Profiles</span>
+                </div>
+                <div className="badge-item">
+                  <span className="badge-check">✓</span>
+                  <span>Secure Payments</span>
+                </div>
+                <div className="badge-item">
+                  <span className="badge-check">✓</span>
+                  <span>Quality Guaranteed</span>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <button type="submit" className="btn-primary" disabled={isLoading}>
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-
-        <p className="signup-link">
-          Don't have an account? <Link to="/role-selection">Sign up</Link>
-        </p>
+        </div>
       </div>
     </div>
   );

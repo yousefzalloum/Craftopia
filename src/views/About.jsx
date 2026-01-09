@@ -30,8 +30,11 @@ const About = () => {
             </div>
             <div className="about-image">
               <img 
-                src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600" 
+                src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=600&fit=crop&q=80" 
                 alt="Industrial workshop"
+                onError={(e) => {
+                  e.target.src = 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&h=600&fit=crop';
+                }}
               />
             </div>
           </div>
@@ -89,21 +92,21 @@ const About = () => {
           <h2 className="section-title">Featured Artisans</h2>
           <div className="artisans-grid">
             <div className="artisan-card">
-              <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200" alt="Ahmad Hassan" />
+              <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&q=80" alt="Ahmad Hassan" />
               <h3>Ahmad Hassan</h3>
-              <p className="artisan-specialty">Metalwork Specialist</p>
+              <p className="artisan-specialty">⚒️ Metalwork Specialist</p>
               <p>15+ years of experience in industrial metalwork and design</p>
             </div>
             <div className="artisan-card">
-              <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200" alt="Sarah Mitchell" />
+              <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=300&fit=crop&q=80" alt="Sarah Mitchell" />
               <h3>Sarah Mitchell</h3>
-              <p className="artisan-specialty">Woodwork Master</p>
+              <p className="artisan-specialty">🪵 Woodwork Master</p>
               <p>Specializes in reclaimed wood furniture and industrial design</p>
             </div>
             <div className="artisan-card">
-              <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200" alt="Michael Chen" />
+              <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop&q=80" alt="Michael Chen" />
               <h3>Michael Chen</h3>
-              <p className="artisan-specialty">Mixed Media Artist</p>
+              <p className="artisan-specialty">🎨 Mixed Media Artist</p>
               <p>Creates unique pieces combining metal, wood, and found objects</p>
             </div>
           </div>
