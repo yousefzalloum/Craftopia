@@ -128,9 +128,34 @@ class NotificationController {
       'Review': '⭐',
       'Payment': '💰',
       'Message': '💬',
-      'System': '🔔'
+      'System': '🔔',
+      'negotiation': '💰'
     };
     return icons[type] || '🔔';
+  }
+
+  // Update price for negotiation (artisan updates price)
+  async updateNegotiationPrice(reservationId, newPrice) {
+    try {
+      console.log('🔄 Controller: Updating price for reservation:', reservationId);
+      await notificationService.updateNegotiationPrice(reservationId, newPrice);
+      return true;
+    } catch (error) {
+      console.error('❌ Controller: Failed to update price:', error);
+      throw error;
+    }
+  }
+
+  // Reject negotiation (artisan rejects customer's price request)
+  async rejectNegotiation(reservationId) {
+    try {
+      console.log('🔄 Controller: Rejecting negotiation for reservation:', reservationId);
+      await notificationService.rejectNegotiation(reservationId);
+      return true;
+    } catch (error) {
+      console.error('❌ Controller: Failed to reject negotiation:', error);
+      throw error;
+    }
   }
 }
 

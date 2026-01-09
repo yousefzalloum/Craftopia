@@ -82,6 +82,11 @@
   color: #546e7a;
 }
 
+.notification-type.negotiation {
+  background: #fff3cd;
+  color: #856404;
+}
+
 .notification-time {
   color: #8F8E91;
   font-size: 0.85rem;
@@ -93,6 +98,134 @@
   font-size: 1rem;
   line-height: 1.5;
   margin: 0;
+}
+
+/* Negotiation Quick Actions */
+.negotiation-quick-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-update-price,
+.btn-reject-nego {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-update-price {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-update-price:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-reject-nego {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn-reject-nego:hover:not(:disabled) {
+  background: #c0392b;
+  transform: translateY(-2px);
+}
+
+.btn-update-price:disabled,
+.btn-reject-nego:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Price Update Form */
+.price-update-form {
+  margin-top: 12px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+}
+
+.price-update-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.price-input-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.price-input-group input {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 12px;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.price-input-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-submit-price,
+.btn-cancel-price {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-submit-price {
+  background: #27ae60;
+  color: white;
+}
+
+.btn-submit-price:hover:not(:disabled) {
+  background: #229954;
+  transform: translateY(-1px);
+}
+
+.btn-submit-price:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cancel-price {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-cancel-price:hover:not(:disabled) {
+  background: #7f8c8d;
+  transform: translateY(-1px);
+}
+
+.btn-cancel-price:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .notification-actions {

@@ -3,7 +3,7 @@
  * Handles all craftsman/artisan related API calls
  */
 
-import { post, get, put, parseApiError } from '../utils/api';
+import { post, get, put, patch, parseApiError } from '../utils/api';
 
 /**
  * Register a new craftsman/artisan
@@ -371,7 +371,8 @@ export const updateCraftsmanProfile = async (craftsmanId, updateData) => {
 export const getAllCraftsmen = async (filters = {}) => {
   try {
     const queryParams = new URLSearchParams(filters).toString();
-    const endpoint = queryParams ? `/artisans?${queryParams}` : '/artisans';
+    // Try /craftsmen endpoint first, fallback to /artisans if needed
+    const endpoint = queryParams ? `/craftsmen?${queryParams}` : '/craftsmen';
     const response = await get(endpoint);
     return response;
   } catch (error) {
@@ -431,4 +432,33 @@ export const logoutCraftsman = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('role');
   localStorage.removeItem('userId');
+};
+
+/**
+ * Change artisan password (authenticated endpoint)
+ * Requires valid JWT token in Authorization header
+ * @param {Object} passwordData - Password change data
+ * @param {string} passwordData.oldPassword - Current password
+ * @param {string} passwordData.newPassword - New password
+ * @returns {Promise<Object>} Success response
+ */
+export const changeArtisanPassword = async (passwordData) => {
+  try {
+    console.log('🔐 Changing artisan password...');
+    
+    const response = await put('/artisans/change-password', {
+      oldPassword: passwordData.oldPassword,
+      newPassword: passwordData.newPassword
+    });
+    
+    console.log('✅ Artisan password changed successfully');
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to change artisan password');
+    console.error('❌ Error Status:', error.status || 'Unknown');
+    console.error('❌ Error Message:', error.message);
+    console.error('❌ Error Response Data:', error.data);
+    
+    throw new Error(parseApiError(error));
+  }
 };

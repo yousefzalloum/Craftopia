@@ -83,6 +83,32 @@ const Notifications = () => {
     }
   };
 
+  const handlePriceUpdate = async (reservationId, newPrice) => {
+    try {
+      console.log('💰 Updating price for reservation:', reservationId, 'to:', newPrice);
+      await NotificationController.updateNegotiationPrice(reservationId, newPrice);
+      alert('Price updated successfully! Customer has been notified.');
+      // Refresh notifications
+      setTimeout(() => fetchNotifications(), 500);
+    } catch (error) {
+      console.error('❌ Failed to update price:', error);
+      throw error;
+    }
+  };
+
+  const handleRejectNegotiation = async (reservationId) => {
+    try {
+      console.log('❌ Rejecting negotiation for reservation:', reservationId);
+      await NotificationController.rejectNegotiation(reservationId);
+      alert('Negotiation rejected. Customer has been notified.');
+      // Refresh notifications
+      setTimeout(() => fetchNotifications(), 500);
+    } catch (error) {
+      console.error('❌ Failed to reject negotiation:', error);
+      throw error;
+    }
+  };
+
   const handleMarkAllAsRead = async () => {
     try {
       console.log('📝 Marking all notifications as read');
@@ -200,6 +226,8 @@ const Notifications = () => {
                         onMarkAsRead={handleMarkAsRead}
                         onDelete={handleDelete}
                         onRefresh={fetchNotifications}
+                        onPriceUpdate={handlePriceUpdate}
+                        onReject={handleRejectNegotiation}
                       />
                     ))}
                   </div>
@@ -215,6 +243,8 @@ const Notifications = () => {
                         onMarkAsRead={handleMarkAsRead}
                         onDelete={handleDelete}
                         onRefresh={fetchNotifications}
+                        onPriceUpdate={handlePriceUpdate}
+                        onReject={handleRejectNegotiation}
                       />
                     ))}
                   </div>
@@ -230,6 +260,8 @@ const Notifications = () => {
                         onMarkAsRead={handleMarkAsRead}
                         onDelete={handleDelete}
                         onRefresh={fetchNotifications}
+                        onPriceUpdate={handlePriceUpdate}
+                        onReject={handleRejectNegotiation}
                       />
                     ))}
                   </div>
@@ -243,6 +275,8 @@ const Notifications = () => {
                   onMarkAsRead={handleMarkAsRead}
                   onDelete={handleDelete}
                   onRefresh={fetchNotifications}
+                  onPriceUpdate={handlePriceUpdate}
+                  onReject={handleRejectNegotiation}
                 />
               ))
             )}

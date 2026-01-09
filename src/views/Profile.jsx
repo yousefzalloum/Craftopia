@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getCustomerProfile, updateCustomerProfile, uploadCustomerProfilePicture } from '../services/customerService';
+import { getCustomerProfile, updateCustomerProfile, uploadCustomerProfilePicture, changePassword } from '../services/customerService';
 import Loading from '../components/Loading';
 import '../styles/Profile.css';
 
@@ -22,6 +22,17 @@ const Profile = () => {
   const [formData, setFormData] = useState({
     name: '',
     phone_number: ''
+  });
+  
+  // Change password states
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(null);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
   useEffect(() => {
@@ -125,6 +136,83 @@ const Profile = () => {
       setIsEditModalOpen(true);
       setEditError(null);
       setSuccessMessage(null);
+    }
+  };
+
+  // Open password change modal
+  const handleOpenPasswordModal = () => {
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setIsPasswordModalOpen(true);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+  };
+
+  // Close password change modal
+  const handleClosePasswordModal = () => {
+    setIsPasswordModalOpen(false);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+  };
+
+  // Handle password input changes
+  const handlePasswordInputChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle password change submission
+  const handleSubmitPasswordChange = async (e) => {
+    e.preventDefault();
+    
+    // Validate passwords
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setPasswordError('All fields are required');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      setPasswordError(null);
+      setPasswordSuccess(null);
+      
+      await changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      
+      setPasswordSuccess('Password changed successfully!');
+      
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        handleClosePasswordModal();
+      }, 2000);
+    } catch (err) {
+      console.error('❌ Failed to change password:', err);
+      setPasswordError(err.message || 'Failed to change password');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -264,23 +352,42 @@ const Profile = () => {
             </button>
             <h1 style={{ margin: 0 }}>My Profile</h1>
           </div>
-          <button 
-            onClick={handleOpenEditModal}
-            style={{ 
-              padding: '0.75rem 1.5rem', 
-              background: '#667eea', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '8px', 
-              cursor: 'pointer',
-              fontWeight: '600',
-              transition: 'background 0.3s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#5568d3'}
-            onMouseLeave={(e) => e.target.style.background = '#667eea'}
-          >
-            ✏️ Edit Profile
-          </button>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button 
+              onClick={handleOpenPasswordModal}
+              style={{ 
+                padding: '0.75rem 1.5rem', 
+                background: '#e74c3c', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '8px', 
+                cursor: 'pointer',
+                fontWeight: '600',
+                transition: 'background 0.3s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#c0392b'}
+              onMouseLeave={(e) => e.target.style.background = '#e74c3c'}
+            >
+              🔒 Change Password
+            </button>
+            <button 
+              onClick={handleOpenEditModal}
+              style={{ 
+                padding: '0.75rem 1.5rem', 
+                background: '#667eea', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '8px', 
+                cursor: 'pointer',
+                fontWeight: '600',
+                transition: 'background 0.3s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#5568d3'}
+              onMouseLeave={(e) => e.target.style.background = '#667eea'}
+            >
+              ✏️ Edit Profile
+            </button>
+          </div>
         </div>
         
         {/* Success Message */}
@@ -612,6 +719,210 @@ const Profile = () => {
                   }}
                 >
                   {editLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {isPasswordModalOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={handleClosePasswordModal}
+        >
+          <div 
+            style={{
+              background: 'white',
+              padding: '2rem',
+              borderRadius: '16px',
+              maxWidth: '500px',
+              width: '90%'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0 }}>🔒 Change Password</h2>
+              <button 
+                onClick={handleClosePasswordModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#7f8c8d'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmitPasswordChange}>
+              {passwordError && (
+                <div style={{
+                  background: '#f8d7da',
+                  color: '#721c24',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  border: '1px solid #f5c6cb'
+                }}>
+                  ❌ {passwordError}
+                </div>
+              )}
+              
+              {passwordSuccess && (
+                <div style={{
+                  background: '#d4edda',
+                  color: '#155724',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  border: '1px solid #c3e6cb'
+                }}>
+                  ✅ {passwordSuccess}
+                </div>
+              )}
+              
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label 
+                  htmlFor="currentPassword"
+                  style={{
+                    display: 'block',
+                    fontWeight: '600',
+                    marginBottom: '0.5rem',
+                    color: '#2c3e50'
+                  }}
+                >
+                  Current Password *
+                </label>
+                <input
+                  type="password"
+                  id="currentPassword"
+                  name="currentPassword"
+                  value={passwordData.currentPassword}
+                  onChange={handlePasswordInputChange}
+                  required
+                  placeholder="Enter current password"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label 
+                  htmlFor="newPassword"
+                  style={{
+                    display: 'block',
+                    fontWeight: '600',
+                    marginBottom: '0.5rem',
+                    color: '#2c3e50'
+                  }}
+                >
+                  New Password *
+                </label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordInputChange}
+                  required
+                  placeholder="Enter new password (min 6 characters)"
+                  minLength="6"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label 
+                  htmlFor="confirmPassword"
+                  style={{
+                    display: 'block',
+                    fontWeight: '600',
+                    marginBottom: '0.5rem',
+                    color: '#2c3e50'
+                  }}
+                >
+                  Confirm New Password *
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordInputChange}
+                  required
+                  placeholder="Confirm new password"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={handleClosePasswordModal}
+                  disabled={passwordLoading}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: '#95a5a6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: passwordLoading ? 'not-allowed' : 'pointer',
+                    fontWeight: '600',
+                    opacity: passwordLoading ? 0.6 : 1
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: '#e74c3c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: passwordLoading ? 'not-allowed' : 'pointer',
+                    fontWeight: '600',
+                    opacity: passwordLoading ? 0.6 : 1
+                  }}
+                >
+                  {passwordLoading ? 'Changing...' : 'Change Password'}
                 </button>
               </div>
             </form>

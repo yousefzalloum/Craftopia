@@ -84,6 +84,34 @@ const notificationService = {
       console.error('❌ Error getting unread count:', error);
       return 0;
     }
+  },
+
+  // Update price for a reservation (artisan response to negotiation)
+  updateNegotiationPrice: async (reservationId, newPrice) => {
+    try {
+      console.log('📡 Updating price for reservation:', reservationId, 'New price:', newPrice);
+      const data = await put(`/reservations/${reservationId}/update-price`, {
+        agreed_price: newPrice
+      });
+      console.log('✅ Price updated successfully');
+      return data;
+    } catch (error) {
+      console.error('❌ Error updating price:', error);
+      throw error;
+    }
+  },
+
+  // Reject negotiation (artisan rejects customer's price request)
+  rejectNegotiation: async (reservationId) => {
+    try {
+      console.log('📡 Rejecting negotiation for reservation:', reservationId);
+      const data = await put(`/reservations/${reservationId}/reject-negotiation`, {});
+      console.log('✅ Negotiation rejected successfully');
+      return data;
+    } catch (error) {
+      console.error('❌ Error rejecting negotiation:', error);
+      throw error;
+    }
   }
 };
 

@@ -39,21 +39,30 @@ const Home = () => {
 
       <section className="home-features">
         <div className="container">
+          <div className="section-header">
+            <h2>Why Craftopia?</h2>
+            <div className="header-divider"></div>
+          </div>
           <div className="features-grid">
             <div className="feature-card">
-              <div className="feature-icon">🔨</div>
-              <h3>Industrial Design</h3>
-              <p>Unique industrial-style crafts that blend functionality with aesthetic appeal</p>
+              <div className="feature-icon">🎨</div>
+              <h3>Artisan Craftsmanship</h3>
+              <p>Each piece is meticulously handcrafted by skilled artisans with years of experience</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">📦</div>
-              <h3>Easy Reservation</h3>
-              <p>Simple and secure reservation process for your favorite crafts</p>
+              <div className="feature-icon">⚡</div>
+              <h3>Easy Booking</h3>
+              <p>Quick and seamless reservation system to secure your favorite crafts instantly</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">⭐</div>
-              <h3>Verified Artisans</h3>
-              <p>All our artisans are verified professionals with years of experience</p>
+              <div className="feature-icon">✓</div>
+              <h3>Quality Assured</h3>
+              <p>Every artisan is verified and every piece is inspected for superior quality</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon">💎</div>
+              <h3>Unique Designs</h3>
+              <p>One-of-a-kind industrial crafts you won't find anywhere else</p>
             </div>
           </div>
         </div>
@@ -63,13 +72,14 @@ const Home = () => {
       <section className="home-gallery">
         <div className="container">
           <div className="gallery-header">
-            <h2>✨ Featured Artisan Work</h2>
-            <p>Discover amazing craftsmanship from our talented artisans</p>
+            <h2>Featured Portfolio</h2>
+            <div className="header-divider"></div>
+            <p>Discover exceptional craftsmanship from our talented artisans</p>
           </div>
           
           {galleryLoading ? (
-            <div style={{ textAlign: 'center', padding: '3rem' }}>
-              <p style={{ color: '#7f8c8d', fontSize: '1.1rem' }}>Loading gallery...</p>
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
             </div>
           ) : galleryFeed.length > 0 ? (
             <div className="gallery-grid">
@@ -133,7 +143,7 @@ const Home = () => {
                       alignItems: 'center',
                       gap: '0.5rem'
                     }}>
-                      <span>🔨</span>
+                      <span style={{ fontSize: '1.2rem' }}>🛠️</span>
                       {item.craftType}
                     </p>
                   </div>
@@ -141,8 +151,10 @@ const Home = () => {
               ))}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '3rem' }}>
-              <p style={{ color: '#7f8c8d', fontSize: '1.1rem' }}>No portfolio items available yet.</p>
+            <div className="empty-gallery">
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
+              <h3>No Portfolio Items Yet</h3>
+              <p>Check back soon for amazing artisan work!</p>
             </div>
           )}
         </div>
@@ -152,27 +164,51 @@ const Home = () => {
         <div className="container">
           <div className="about-content">
             <div className="about-text">
-              <h2>Why Choose Craftopia?</h2>
+              <h2>Connecting Artisans with Collectors</h2>
+              <div className="header-divider" style={{ background: '#95a5a6', marginBottom: '2rem', marginLeft: 0 }}></div>
               <p>
-                Craftopia connects you with talented artisans who create unique industrial crafts. 
-                Each piece tells a story and brings character to your space. We carefully curate 
-                our collection to ensure quality, authenticity, and exceptional craftsmanship.
+                Craftopia bridges the gap between skilled artisans and design enthusiasts. 
+                Every piece on our platform represents hours of dedication, traditional techniques, 
+                and modern innovation combined to create truly unique industrial crafts.
               </p>
               <p>
-                Whether you're looking for furniture, decor, or functional art, our platform makes 
-                it easy to discover and reserve pieces that match your style and needs.
+                From custom furniture to decorative metalwork, our verified artisans bring your 
+                vision to life with exceptional attention to detail and uncompromising quality standards.
               </p>
               <button 
                 className="btn-secondary"
                 onClick={() => navigate('/about')}
+                style={{
+                  background: '#ecf0f1',
+                  color: '#2c3e50',
+                  border: 'none',
+                  padding: '1rem 2rem',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  marginTop: '1rem'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#95a5a6';
+                  e.target.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = '#ecf0f1';
+                  e.target.style.transform = 'translateY(0)';
+                }}
               >
-                Learn More About Us
+                Learn More About Us →
               </button>
             </div>
             <div className="about-image">
               <img 
-                src="https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=600" 
-                alt="Artisan at work"
+                src="https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=700&h=500&fit=crop" 
+                alt="Professional artisan crafting"
+                onError={(e) => {
+                  e.target.src = 'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=600';
+                }}
               />
             </div>
           </div>

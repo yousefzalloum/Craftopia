@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getArtisanProfile, updateArtisanProfile, uploadProfilePicture, uploadPortfolioImage, deletePortfolioImage } from '../services/craftsmanService';
+import { getArtisanProfile, updateArtisanProfile, uploadProfilePicture, uploadPortfolioImage, deletePortfolioImage, changeArtisanPassword } from '../services/craftsmanService';
 import { get } from '../utils/api';
 import Loading from '../components/Loading';
 import '../styles/CraftsmanProfile.css';
@@ -45,6 +45,17 @@ const ArtisanProfilePage = () => {
   const [portfolioError, setPortfolioError] = useState(null);
   const [portfolioSuccess, setPortfolioSuccess] = useState(null);
   const [portfolioComments, setPortfolioComments] = useState({});
+
+  // Change password states
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(null);
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
   useEffect(() => {
     // Check authentication
@@ -448,6 +459,83 @@ const ArtisanProfilePage = () => {
     }
   };
 
+  // Open password change modal
+  const handleOpenPasswordModal = () => {
+    setPasswordData({
+      oldPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setIsPasswordModalOpen(true);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+  };
+
+  // Close password change modal
+  const handleClosePasswordModal = () => {
+    setIsPasswordModalOpen(false);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    setPasswordData({
+      oldPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+  };
+
+  // Handle password input changes
+  const handlePasswordInputChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle password change submission
+  const handleSubmitPasswordChange = async (e) => {
+    e.preventDefault();
+    
+    // Validate passwords
+    if (!passwordData.oldPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setPasswordError('All fields are required');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      setPasswordError(null);
+      setPasswordSuccess(null);
+      
+      await changeArtisanPassword({
+        oldPassword: passwordData.oldPassword,
+        newPassword: passwordData.newPassword
+      });
+      
+      setPasswordSuccess('Password changed successfully!');
+      
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        handleClosePasswordModal();
+      }, 2000);
+    } catch (err) {
+      console.error('❌ Failed to change password:', err);
+      setPasswordError(err.message || 'Failed to change password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   return (
     <div className="craftsman-profile-page">
       <div className="container">
@@ -457,9 +545,14 @@ const ArtisanProfilePage = () => {
             <button onClick={() => navigate('/craftsman-dashboard')} className="btn-back">
               ← Back to Dashboard
             </button>
-            <button onClick={handleOpenEditModal} className="btn-edit-profile">
-              ✏️ Edit Profile
-            </button>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button onClick={handleOpenPasswordModal} className="btn-change-password" style={{ background: '#e74c3c' }}>
+                🔒 Change Password
+              </button>
+              <button onClick={handleOpenEditModal} className="btn-edit-profile">
+                ✏️ Edit Profile
+              </button>
+            </div>
           </div>
           
           {/* Success Message */}
@@ -1074,6 +1167,126 @@ const ArtisanProfilePage = () => {
                   {portfolioLoading ? 'Uploading...' : 'Upload'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {isPasswordModalOpen && (
+        <div className="modal-overlay" onClick={handleClosePasswordModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2>🔒 Change Password</h2>
+              <button onClick={handleClosePasswordModal} className="btn-close-modal">
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ padding: '1.5rem' }}>
+              <form onSubmit={handleSubmitPasswordChange}>
+                {passwordError && (
+                  <div className="error-message" style={{ marginBottom: '1rem' }}>
+                    ❌ {passwordError}
+                  </div>
+                )}
+                
+                {passwordSuccess && (
+                  <div className="success-message" style={{ marginBottom: '1rem' }}>
+                    ✅ {passwordSuccess}
+                  </div>
+                )}
+                
+                <div className="form-group">
+                  <label htmlFor="oldPassword">Current Password *</label>
+                  <input
+                    type="password"
+                    id="oldPassword"
+                    name="oldPassword"
+                    value={passwordData.oldPassword}
+                    onChange={handlePasswordInputChange}
+                    required
+                    placeholder="Enter current password"
+                    disabled={passwordLoading}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="newPassword">New Password *</label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordInputChange}
+                    required
+                    placeholder="Enter new password (min 6 characters)"
+                    minLength="6"
+                    disabled={passwordLoading}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">Confirm New Password *</label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordInputChange}
+                    required
+                    placeholder="Confirm new password"
+                    disabled={passwordLoading}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleClosePasswordModal}
+                    className="btn-cancel"
+                    disabled={passwordLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-save"
+                    disabled={passwordLoading}
+                    style={{
+                      background: '#e74c3c',
+                      opacity: passwordLoading ? 0.6 : 1,
+                      cursor: passwordLoading ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {passwordLoading ? 'Changing...' : 'Change Password'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

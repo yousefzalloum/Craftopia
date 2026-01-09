@@ -289,3 +289,32 @@ export const cancelReservation = async (reservationId) => {
     throw new Error(parseApiError(error));
   }
 };
+
+/**
+ * Change customer password (authenticated endpoint)
+ * Requires valid JWT token in Authorization header
+ * @param {Object} passwordData - Password change data
+ * @param {string} passwordData.currentPassword - Current password
+ * @param {string} passwordData.newPassword - New password
+ * @returns {Promise<Object>} Success response
+ */
+export const changePassword = async (passwordData) => {
+  try {
+    console.log('🔐 Changing customer password...');
+    
+    const response = await put('/customers/change-password', {
+      oldPassword: passwordData.currentPassword,
+      newPassword: passwordData.newPassword
+    });
+    
+    console.log('✅ Password changed successfully');
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to change password');
+    console.error('❌ Error Status:', error.status || 'Unknown');
+    console.error('❌ Error Message:', error.message);
+    console.error('❌ Error Response Data:', error.data);
+    
+    throw new Error(parseApiError(error));
+  }
+};

@@ -92,12 +92,22 @@ const JobsPage = () => {
     try {
       setProcessingJobId(selectedJob._id);
       
+      // Check if this is an update (job has existing price) or initial proposal
+      const isUpdate = selectedJob.agreed_price && selectedJob.agreed_price > 0;
+      
+      // Use the same /status endpoint for both initial and update
       await apiRequest(`/reservations/${selectedJob._id}/status`, {
         method: 'PUT',
         body: JSON.stringify({ price: proposedPrice })
       });
-
-      console.log(`✅ Price $${proposedPrice} proposed for job ${selectedJob._id}`);
+      
+      if (isUpdate) {
+        console.log(`✅ Price updated to $${proposedPrice} for job ${selectedJob._id}`);
+        alert(`Price updated to $${proposedPrice}! Customer has been notified.`);
+      } else {
+        console.log(`✅ Price $${proposedPrice} proposed for job ${selectedJob._id}`);
+        alert(`Price $${proposedPrice} proposed successfully!`);
+      }
       
       setPriceModalOpen(false);
       setSelectedJob(null);
@@ -390,6 +400,42 @@ const JobsPage = () => {
                           {processingJobId === job._id ? '⏳' : '✗'} Reject
                         </button>
                       </div>
+                    ) : (job.status === 'Negotiating' || job.status === 'Price_Proposed') ? (
+                      <div className="action-buttons">
+                        <button
+                          className="btn-edit-price"
+                          onClick={() => {
+                            setSelectedJob(job);
+                            setProposedPrice(job.agreed_price?.toString() || '');
+                            setPriceModalOpen(true);
+                          }}
+                          disabled={processingJobId === job._id}
+                          style={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold',
+                            marginBottom: '0.5rem',
+                            width: '100%',
+                            transition: 'transform 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+                          onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                        >
+                          {processingJobId === job._id ? '⏳' : '✏️'} Edit Price
+                        </button>
+                        <button
+                          className="btn-reject"
+                          onClick={() => handleReject(job._id)}
+                          disabled={processingJobId === job._id}
+                        >
+                          {processingJobId === job._id ? '⏳' : '✗'} Reject
+                        </button>
+                      </div>
                     ) : (
                       <span className="no-action">—</span>
                     )}
@@ -424,9 +470,18 @@ const JobsPage = () => {
             width: '90%'
           }}>
             <div style={{ marginBottom: '1.5rem' }}>
-              <h2 style={{ margin: '0 0 0.5rem 0' }}>💰 Propose Price</h2>
+              <h2 style={{ margin: '0 0 0.5rem 0' }}>
+                💰 {selectedJob.agreed_price && selectedJob.agreed_price > 0 ? 'Update Price' : 'Propose Price'}
+              </h2>
               <p style={{ color: '#7f8c8d', margin: 0 }}>
-                Set a price for: <strong>{selectedJob.title}</strong>
+                {selectedJob.agreed_price && selectedJob.agreed_price > 0 ? (
+                  <>
+                    Current price: <strong style={{ color: '#e67e22' }}>${selectedJob.agreed_price.toFixed(2)}</strong><br />
+                    Enter new price for: <strong>{selectedJob.title}</strong>
+                  </>
+                ) : (
+                  <>Set a price for: <strong>{selectedJob.title}</strong></>
+                )}
               </p>
             </div>
 
