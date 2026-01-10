@@ -45,7 +45,7 @@ function AppContent() {
           <Route path="/craftsman-dashboard" element={<CraftsmanDashboard />} />
           <Route path="/artisan-profile" element={<ArtisanProfilePage />} />
           <Route path="/artisans/:id" element={<ArtisanDetailsPage />} />
-          <Route path="/craftsman/:id" element={<CraftsmanProfile />} />
+          <Route path="/craftsman/:id" element={<ArtisanDetailsPage />} />
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />

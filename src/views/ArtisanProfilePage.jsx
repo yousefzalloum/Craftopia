@@ -17,6 +17,7 @@ const ArtisanProfilePage = () => {
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [successBanner, setSuccessBanner] = useState(false);
+  const [calculatedRating, setCalculatedRating] = useState(0);
   
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -98,8 +99,22 @@ const ArtisanProfilePage = () => {
         
         if (Array.isArray(data)) {
           setReviews(data);
+          // Calculate average rating
+          if (data.length > 0) {
+            const total = data.reduce((sum, review) => sum + (review.stars_number || 0), 0);
+            const average = total / data.length;
+            setCalculatedRating(average);
+            console.log('⭐ Calculated average rating:', average.toFixed(1));
+          }
         } else if (data && Array.isArray(data.reviews)) {
           setReviews(data.reviews);
+          // Calculate average rating
+          if (data.reviews.length > 0) {
+            const total = data.reviews.reduce((sum, review) => sum + (review.stars_number || 0), 0);
+            const average = total / data.reviews.length;
+            setCalculatedRating(average);
+            console.log('⭐ Calculated average rating:', average.toFixed(1));
+          }
         } else {
           setReviews([]);
         }
@@ -487,7 +502,7 @@ const ArtisanProfilePage = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Rating</div>
-                <div className="stat-value">{profileData.averageRating ? profileData.averageRating.toFixed(1) : '0.0'}</div>
+                <div className="stat-value">{calculatedRating > 0 ? calculatedRating.toFixed(1) : (profileData.averageRating ? profileData.averageRating.toFixed(1) : '0.0')}</div>
               </div>
             </div>
 

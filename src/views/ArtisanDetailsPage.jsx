@@ -6,7 +6,7 @@ import { deletePortfolioImage } from '../services/adminService';
 import { ReservationController } from '../controllers/ReservationController';
 import { get } from '../utils/api';
 import Loading from '../components/Loading';
-import '../styles/CraftsmanProfile.css';
+import '../styles/ArtisanDetailsPage.css';
 
 const ArtisanDetailsPage = () => {
   const { id } = useParams();
@@ -18,6 +18,7 @@ const ArtisanDetailsPage = () => {
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [availability, setAvailability] = useState([]);
+  const [calculatedRating, setCalculatedRating] = useState(0);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [deletingImage, setDeletingImage] = useState(null);
   
@@ -83,9 +84,23 @@ const ArtisanDetailsPage = () => {
         if (Array.isArray(data)) {
           console.log('✅ Setting reviews array with length:', data.length);
           setReviews(data);
+          // Calculate average rating
+          if (data.length > 0) {
+            const total = data.reduce((sum, review) => sum + (review.stars_number || 0), 0);
+            const average = total / data.length;
+            setCalculatedRating(average);
+            console.log('⭐ Calculated average rating:', average.toFixed(1));
+          }
         } else if (data && Array.isArray(data.reviews)) {
           console.log('✅ Setting reviews from data.reviews with length:', data.reviews.length);
           setReviews(data.reviews);
+          // Calculate average rating
+          if (data.reviews.length > 0) {
+            const total = data.reviews.reduce((sum, review) => sum + (review.stars_number || 0), 0);
+            const average = total / data.reviews.length;
+            setCalculatedRating(average);
+            console.log('⭐ Calculated average rating:', average.toFixed(1));
+          }
         } else {
           console.log('⚠️ No valid reviews found, data structure:', data);
           setReviews([]);
@@ -324,9 +339,19 @@ const ArtisanDetailsPage = () => {
           <div className="profile-hero">
             <div className="profile-image-container">
               <img 
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(artisan.name)}&background=3498db&color=fff&size=200`}
+                src={
+                  artisan.profilePicture 
+                    ? (artisan.profilePicture.startsWith('http') 
+                        ? artisan.profilePicture 
+                        : `http://localhost:5000${artisan.profilePicture}`)
+                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(artisan.name)}&background=e67e22&color=fff&size=200`
+                }
                 alt={artisan.name}
                 className="profile-image"
+                onError={(e) => {
+                  console.error('❌ Failed to load profile image:', e.target.src);
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(artisan.name)}&background=e67e22&color=fff&size=200`;
+                }}
               />
               <span className="availability-badge">Active</span>
             </div>
@@ -340,7 +365,7 @@ const ArtisanDetailsPage = () => {
                 <div className="stat">
                   <span className="stat-icon">⭐</span>
                   <div>
-                    <strong>{artisan.averageRating ? artisan.averageRating.toFixed(1) : '0.0'}</strong>
+                    <strong>{calculatedRating > 0 ? calculatedRating.toFixed(1) : (artisan.averageRating ? artisan.averageRating.toFixed(1) : '0.0')}</strong>
                     <small>Rating</small>
                   </div>
                 </div>
@@ -616,7 +641,7 @@ const ArtisanDetailsPage = () => {
             </div>
             <div className="detail-card">
               <strong>Average Rating</strong>
-              <span className="detail-value">⭐ {artisan.averageRating ? artisan.averageRating.toFixed(1) : '0.0'}</span>
+              <span className="detail-value">⭐ {calculatedRating > 0 ? calculatedRating.toFixed(1) : (artisan.averageRating ? artisan.averageRating.toFixed(1) : '0.0')}</span>
             </div>
           </div>
         </div>
