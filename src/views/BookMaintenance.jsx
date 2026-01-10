@@ -14,7 +14,7 @@ const BookMaintenance = () => {
   // Check authentication on component mount
   useEffect(() => {
     if (!isLoggedIn) {
-      alert('Please login or sign up to book a maintenance service');
+      alert('You must login first to book a maintenance service');
       navigate('/login');
     }
   }, [isLoggedIn, navigate]);
@@ -84,7 +84,7 @@ const BookMaintenance = () => {
     setMessage('');
 
     if (!isLoggedIn || !user) {
-      setMessage('Please login first to book a service');
+      setMessage('You must login first to book a service');
       setTimeout(() => navigate('/login'), 2000);
       return;
     }

@@ -165,14 +165,13 @@ export const uploadCustomerProfilePicture = async (imageFile) => {
     // Get token
     const token = localStorage.getItem('token');
     
-    // Get API base URL from environment or use default
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-    const url = `${baseUrl}/customers/profile-picture`;
+    // Use relative path to work with Vite proxy
+    const url = '/api/customers/avatar';
     
     console.log('📸 Upload URL:', url);
     
     const response = await fetch(url, {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`
       },
@@ -186,7 +185,7 @@ export const uploadCustomerProfilePicture = async (imageFile) => {
     }
     
     console.log('✅ Customer profile picture uploaded successfully:', data);
-    console.log('📸 Profile picture path:', data.profilePicture);
+    console.log('📸 Avatar path:', data.avatar);
     return data;
   } catch (error) {
     console.error('❌ Failed to upload customer profile picture:', error);

@@ -29,6 +29,7 @@ const CraftsmanProfile = () => {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [availability, setAvailability] = useState([]);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [calculatedRating, setCalculatedRating] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [portfolioComments, setPortfolioComments] = useState({});
@@ -96,25 +97,41 @@ const CraftsmanProfile = () => {
         const data = await get(`/reviews/${craftsman._id}`);
         console.log('✅ Reviews fetched:', data);
         
+        let reviewsArray = [];
         if (Array.isArray(data)) {
-          setReviews(data);
+          reviewsArray = data;
         } else if (data && Array.isArray(data.reviews)) {
-          setReviews(data.reviews);
+          reviewsArray = data.reviews;
+        }
+        
+        setReviews(reviewsArray);
+        
+        // Calculate average rating from reviews
+        console.log('📊 Reviews array for rating calculation:', reviewsArray);
+        console.log('📊 First review structure:', reviewsArray[0]);
+        if (reviewsArray.length > 0) {
+          console.log('📊 Review stars_number:', reviewsArray.map(r => r.stars_number));
+          const totalRating = reviewsArray.reduce((sum, review) => sum + (review.stars_number || 0), 0);
+          const avgRating = totalRating / reviewsArray.length;
+          console.log('⭐ Total rating:', totalRating, 'Count:', reviewsArray.length, 'Average:', avgRating);
+          setCalculatedRating(avgRating);
         } else {
-          setReviews([]);
+          console.log('⚠️ No reviews found, setting rating to null');
+          setCalculatedRating(null);
         }
       } catch (err) {
         console.error('❌ Failed to fetch reviews:', err);
         setReviews([]);
+        setCalculatedRating(null);
       } finally {
         setReviewsLoading(false);
       }
     };
 
-    if (craftsman) {
+    if (craftsman?._id) {
       fetchReviews();
     }
-  }, [craftsman]);
+  }, [craftsman?._id]);
 
   // Fetch availability for this artisan
   useEffect(() => {
@@ -140,10 +157,10 @@ const CraftsmanProfile = () => {
       }
     };
 
-    if (craftsman) {
+    if (craftsman?._id) {
       fetchAvailability();
     }
-  }, [craftsman]);
+  }, [craftsman?._id]);
 
   // Fetch comments for portfolio images
   useEffect(() => {
@@ -504,11 +521,11 @@ const CraftsmanProfile = () => {
                 <div className="image-ring"></div>
                 <img 
                   src={
-                    craftsman.profilePicture
-                      ? (craftsman.profilePicture.startsWith('http') 
-                          ? craftsman.profilePicture 
-                          : `http://localhost:5000${craftsman.profilePicture}`)
-                      : craftsman.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(craftsman.name)}&background=667eea&color=fff&size=200`
+                    craftsman.avatar
+                      ? (craftsman.avatar.startsWith('http') 
+                          ? craftsman.avatar 
+                          : `http://localhost:5000${craftsman.avatar}`)
+                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(craftsman.name)}&background=667eea&color=fff&size=200`
                   }
                   alt={craftsman.name}
                   className="profile-image-enhanced"
@@ -609,7 +626,7 @@ const CraftsmanProfile = () => {
                 <div className="stat-card">
                   <div className="stat-icon-enhanced rating">⭐</div>
                   <div className="stat-content">
-                    <div className="stat-value">{craftsman.averageRating?.toFixed(1) || 'N/A'}</div>
+                    <div className="stat-value">{calculatedRating ? calculatedRating.toFixed(1) : (craftsman.averageRating?.toFixed(1) || 'N/A')}</div>
                     <div className="stat-label">Rating</div>
                   </div>
                 </div>
@@ -630,7 +647,7 @@ const CraftsmanProfile = () => {
                 <div className="stat-card">
                   <div className="stat-icon-enhanced phone">📱</div>
                   <div className="stat-content">
-                    <div className="stat-value-small">{craftsman.phone_number}</div>
+                    <div className="stat-value-small">{craftsman.phone || 'Not provided'}</div>
                     <div className="stat-label">Phone</div>
                   </div>
                 </div>

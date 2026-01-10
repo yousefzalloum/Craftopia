@@ -59,11 +59,6 @@ const Home = () => {
               <h3>Quality Assured</h3>
               <p>Every artisan is verified and every piece is inspected for superior quality</p>
             </div>
-            <div className="feature-card">
-              <div className="feature-icon">💎</div>
-              <h3>Unique Designs</h3>
-              <p>One-of-a-kind industrial crafts you won't find anywhere else</p>
-            </div>
           </div>
         </div>
       </section>

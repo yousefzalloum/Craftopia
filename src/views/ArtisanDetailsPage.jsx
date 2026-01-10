@@ -229,7 +229,7 @@ const ArtisanDetailsPage = () => {
   // Handle opening order modal
   const handleOpenOrderModal = (portfolioItem, index) => {
     if (!isLoggedIn) {
-      alert('Please login to place an order');
+      alert('You must login first to place an order');
       navigate('/login');
       return;
     }
@@ -381,7 +381,7 @@ const ArtisanDetailsPage = () => {
             </div>
             <div className="contact-item">
               <strong>📱 Phone:</strong>
-              <span>{artisan.phone_number || 'Not provided'}</span>
+              <span>{artisan.phone || 'Not provided'}</span>
             </div>
             <div className="contact-item">
               <strong>📍 Location:</strong>

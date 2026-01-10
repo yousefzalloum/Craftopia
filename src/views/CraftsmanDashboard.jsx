@@ -266,7 +266,7 @@ const CraftsmanDashboard = () => {
           <div className="craftsman-info">
             <h1>👨‍🔧 {craftsman.name}'s Dashboard</h1>
             <p className="profession">{craftsman.profession} • Business Management</p>
-            <p className="bio">Manage your bookings, availability, and portfolio</p>
+            <p className="bio">Manage your bookings, availability</p>
           </div>
           
           <div className="dashboard-actions">
@@ -360,29 +360,6 @@ const CraftsmanDashboard = () => {
           </div>
         )}
 
-        {/* Current Available Times */}
-        <div className="current-times">
-          <h3>📅 Current Available Times:</h3>
-          <div className="times-list">
-            {(() => {
-              // Sort accepted jobs by start_date ascending
-              const sortedJobs = [...acceptedJobs].sort((a, b) => 
-                new Date(a.start_date) - new Date(b.start_date)
-              );
-              
-              if (sortedJobs.length > 0) {
-                return sortedJobs.map(job => (
-                  <span key={job._id} className="time-badge">
-                    {formatDate(job.start_date)}
-                  </span>
-                ));
-              } else {
-                return <p className="no-times">No available times</p>;
-              }
-            })()}
-          </div>
-        </div>
-
         {/* Bookings Section */}
         <div className="bookings-section">
           <div className="section-header">
@@ -425,7 +402,7 @@ const CraftsmanDashboard = () => {
                         <h3>{booking.customer?.name || 'N/A'}</h3>
                       </div>
                       <div className="booking-price">
-                        ${booking.total_price?.toFixed(2) || '0.00'}
+                        ${(booking.agreed_price || booking.total_price || 0).toFixed(2)}
                       </div>
                     </div>
                     
@@ -440,7 +417,7 @@ const CraftsmanDashboard = () => {
                       </div>
                       <div className="booking-info-row">
                         <span className="label">📅 Start Date:</span>
-                        <span className="value">{formatDate(booking.start_date)}</span>
+                        <span className="value">{formatDate(booking.start_date || booking.createdAt)}</span>
                       </div>
                       <div className="booking-info-row">
                         <span className="label">✅ Status:</span>

@@ -27,9 +27,10 @@ const ArtisanProfilePage = () => {
   const [successMessage, setSuccessMessage] = useState(null);
   const [profilePictureFile, setProfilePictureFile] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
+  const [imageRefreshKey, setImageRefreshKey] = useState(Date.now());
   const [formData, setFormData] = useState({
     name: '',
-    phone_number: '',
+    phone: '',
     location: '',
     craftType: '',
     description: ''
@@ -75,6 +76,8 @@ const ArtisanProfilePage = () => {
         
         const data = await getArtisanProfile();
         console.log('✅ Profile data received:', data);
+        console.log('📱 Phone field:', data.phone);
+        console.log('📋 All data fields:', Object.keys(data));
         
         setProfileData(data);
       } catch (err) {
@@ -215,7 +218,7 @@ const ArtisanProfilePage = () => {
     if (profileData) {
       setFormData({
         name: profileData.name || '',
-        phone_number: profileData.phone_number || '',
+        phone: profileData.phone || '',
         location: profileData.location || '',
         craftType: profileData.craftType || '',
         description: profileData.description || ''
@@ -283,13 +286,15 @@ const ArtisanProfilePage = () => {
       setSuccessMessage(null);
       
       console.log('📝 Submitting profile update:', formData);
+      console.log('📱 Phone being sent:', formData.phone);
       
       // Upload profile picture first if selected
       if (profilePictureFile) {
         console.log('📸 Uploading profile picture...');
         try {
-          await uploadProfilePicture(profilePictureFile);
-          console.log('✅ Profile picture uploaded');
+          const uploadResponse = await uploadProfilePicture(profilePictureFile);
+          console.log('✅ Profile picture uploaded:', uploadResponse);
+          console.log('📸 New profile picture path:', uploadResponse.profilePicture);
         } catch (uploadError) {
           console.warn('⚠️ Profile picture upload failed:', uploadError.message);
           // Continue with other updates even if image upload fails
@@ -301,14 +306,22 @@ const ArtisanProfilePage = () => {
       
       console.log('✅ Profile update request successful');
       
+      // Wait a moment for backend to process the image
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Refetch the complete profile to ensure all fields are present
       const refreshedProfile = await getArtisanProfile();
       console.log('✅ Refreshed profile data:', refreshedProfile);
       console.log('📸 Profile picture field:', refreshedProfile.profilePicture);
+      console.log('� Phone number after refresh:', refreshedProfile.phone_number);
+      console.log('�📸 Profile picture field:', refreshedProfile.profilePicture);
       console.log('📸 Full image URL will be:', refreshedProfile.profilePicture ? `${window.location.origin}${refreshedProfile.profilePicture}` : 'No profile picture');
       
       // Update local profile data with complete data
       setProfileData(refreshedProfile);
+      
+      // Force image refresh by updating the key
+      setImageRefreshKey(Date.now());
       
       // Clear file input
       setProfilePictureFile(null);
@@ -565,11 +578,12 @@ const ArtisanProfilePage = () => {
           <div className="profile-hero">
             <div className="profile-image-container">
               <img 
+                key={imageRefreshKey}
                 src={
-                  profileData.profilePicture
-                    ? (profileData.profilePicture.startsWith('http') 
-                        ? profileData.profilePicture 
-                        : `http://localhost:5000${profileData.profilePicture}`)
+                  (profileData.avatar || profileData.profilePicture)
+                    ? ((profileData.avatar || profileData.profilePicture).startsWith('http') 
+                        ? `${profileData.avatar || profileData.profilePicture}?t=${imageRefreshKey}`
+                        : `http://localhost:5000${profileData.avatar || profileData.profilePicture}?t=${imageRefreshKey}`)
                     : `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=3498db&color=fff&size=200`
                 }
                 alt={profileData.name}
@@ -632,7 +646,7 @@ const ArtisanProfilePage = () => {
             </div>
             <div className="contact-item">
               <strong>📱 Phone:</strong>
-              <span>{profileData.phone_number || 'Not provided'}</span>
+              <span>{profileData.phone || 'Not provided'}</span>
             </div>
             <div className="contact-item">
               <strong>📍 Location:</strong>
@@ -980,12 +994,12 @@ const ArtisanProfilePage = () => {
               </div>
               
               <div className="form-group">
-                <label htmlFor="phone_number">Phone Number *</label>
+                <label htmlFor="phone">Phone Number *</label>
                 <input
                   type="tel"
-                  id="phone_number"
-                  name="phone_number"
-                  value={formData.phone_number}
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
                   onChange={handleInputChange}
                   required
                   placeholder="Your phone number"

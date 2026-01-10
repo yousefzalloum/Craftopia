@@ -130,7 +130,7 @@ export const getArtisanProfile = async () => {
  * The backend determines which artisan to update from the token
  * @param {Object} updateData - Data to update
  * @param {string} updateData.name - Artisan name
- * @param {string} updateData.phone_number - Phone number
+ * @param {string} updateData.phone - Phone number
  * @param {string} updateData.location - Location/city
  * @param {string} updateData.craftType - Type of craft
  * @param {string} updateData.description - Profile description
@@ -181,14 +181,13 @@ export const uploadProfilePicture = async (imageFile) => {
     // Get token
     const token = localStorage.getItem('token');
     
-    // Get API base URL from environment or use default
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-    const url = `${baseUrl}/artisans/profile-picture`;
+    // Use relative path to work with Vite proxy
+    const url = '/api/artisans/avatar';
     
     console.log('📸 Upload URL:', url);
     
     const response = await fetch(url, {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`
       },
@@ -202,7 +201,7 @@ export const uploadProfilePicture = async (imageFile) => {
     }
     
     console.log('✅ Profile picture uploaded successfully:', data);
-    console.log('📸 Profile picture path:', data.profilePicture);
+    console.log('📸 Avatar path:', data.avatar);
     return data;
   } catch (error) {
     console.error('❌ Failed to upload profile picture:', error);
@@ -234,9 +233,8 @@ export const uploadPortfolioImage = async (imageFile, price, description) => {
     // Get token
     const token = localStorage.getItem('token');
     
-    // Get API base URL from environment or use default
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-    const url = `${baseUrl}/artisans/upload-portfolio`;
+    // Use relative path to work with Vite proxy
+    const url = '/api/artisans/upload-portfolio';
     
     console.log('🎨 Upload URL:', url);
     
@@ -371,12 +369,43 @@ export const updateCraftsmanProfile = async (craftsmanId, updateData) => {
 export const getAllCraftsmen = async (filters = {}) => {
   try {
     const queryParams = new URLSearchParams(filters).toString();
-    // Try /craftsmen endpoint first, fallback to /artisans if needed
-    const endpoint = queryParams ? `/craftsmen?${queryParams}` : '/craftsmen';
+    // Try /artisans endpoint (primary), fallback to /craftsmen if needed
+    const endpoint = queryParams ? `/artisans?${queryParams}` : '/artisans';
+    console.log('🔍 Fetching artisans from:', endpoint);
     const response = await get(endpoint);
+    console.log('✅ Artisans response:', response.length || response?.length || 'unknown length');
     return response;
   } catch (error) {
-    throw new Error(parseApiError(error));
+    console.error('❌ Failed to fetch artisans from API:', error.message);
+    // Import dummy data as fallback
+    const { craftsmenData } = await import('../models/Craftsman');
+    console.log('⚠️ Using dummy data fallback:', craftsmenData.length, 'artisans');
+    
+    // Apply filters to dummy data
+    let filtered = craftsmenData;
+    if (filters.craftType) {
+      filtered = filtered.filter(c => c.profession === filters.craftType);
+    }
+    if (filters.location) {
+      filtered = filtered.filter(c => c.city === filters.location);
+    }
+    
+    // Convert dummy data to API format
+    return filtered.map(c => ({
+      _id: c.id.toString(),
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      craftType: c.profession,
+      location: c.city,
+      averageRating: c.rating,
+      totalReviews: c.reviews,
+      description: c.bio,
+      yearsOfExperience: c.experienceYears,
+      portfolioImages: c.portfolio?.map(p => p.imageUrl) || [],
+      availability: c.availability,
+      availableTimes: c.availableTimes
+    }));
   }
 };
 

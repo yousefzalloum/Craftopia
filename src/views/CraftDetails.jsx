@@ -141,6 +141,50 @@ const CraftDetails = () => {
               </span>
             </div>
 
+            {showLoginPrompt && (
+              <div className="login-prompt" style={{
+                background: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '8px',
+                padding: '1rem',
+                marginTop: '1rem',
+                textAlign: 'center'
+              }}>
+                <p style={{ color: '#856404', margin: '0 0 1rem 0', fontWeight: '500' }}>
+                  ⚠️ You must login first to make a reservation
+                </p>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <button 
+                    onClick={() => navigate('/login', { state: { from: `/crafts/${id}` } })}
+                    style={{
+                      background: '#e67e22',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Login
+                  </button>
+                  <button 
+                    onClick={() => setShowLoginPrompt(false)}
+                    style={{
+                      background: '#95a5a6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {craft.availability && !showReservationForm && !showLoginPrompt && (
               <button 
                 className="btn-reserve"

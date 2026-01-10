@@ -20,6 +20,7 @@ const Reservations = () => {
   const [reviewForm, setReviewForm] = useState({ stars_number: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewedReservations, setReviewedReservations] = useState(new Set());
+  const [reviewedArtisans, setReviewedArtisans] = useState(new Set());
   
   // Price reply state
   const [replyModalOpen, setReplyModalOpen] = useState(false);
@@ -54,6 +55,10 @@ const Reservations = () => {
         const reservationsWithReviews = (data || []).filter(res => res.hasReview);
         const reviewedIds = new Set(reservationsWithReviews.map(res => res._id));
         setReviewedReservations(reviewedIds);
+        
+        // Track which artisans have been reviewed by this customer
+        const reviewedArtisanIds = new Set(reservationsWithReviews.map(res => res.artisan?._id).filter(Boolean));
+        setReviewedArtisans(reviewedArtisanIds);
       } catch (err) {
         console.error('Failed to fetch reservations:', err);
         setError(err.message || 'Failed to load reservations');
@@ -97,6 +102,9 @@ const Reservations = () => {
       
       // Mark this specific reservation as reviewed
       setReviewedReservations(prev => new Set([...prev, reservation._id]));
+      
+      // Mark this artisan as reviewed
+      setReviewedArtisans(prev => new Set([...prev, reservation.artisan._id]));
       
       // Close the form
       handleCloseReviewForm();
@@ -476,7 +484,7 @@ const Reservations = () => {
                           {cancellingId === reservation._id ? 'Cancelling...' : 'Cancel'}
                         </button>
                       )}
-                      {reservation.status === 'Completed' && reservation.artisan?._id && !reviewedReservations.has(reservation._id) && (
+                      {reservation.status === 'Completed' && reservation.artisan?._id && !reviewedArtisans.has(reservation.artisan._id) && (
                         <button
                           onClick={() => handleOpenReviewForm(reservation._id)}
                           style={{
@@ -499,7 +507,7 @@ const Reservations = () => {
                           Add Review
                         </button>
                       )}
-                      {reservation.status === 'Completed' && reservation.artisan?._id && reviewedReservations.has(reservation._id) && (
+                      {reservation.status === 'Completed' && reservation.artisan?._id && reviewedArtisans.has(reservation.artisan._id) && (
                         <span style={{
                           padding: '0.5rem 1rem',
                           background: '#95a5a6',
@@ -508,7 +516,7 @@ const Reservations = () => {
                           fontSize: '0.9rem',
                           display: 'inline-block'
                         }}>
-                          ✓ Reviewed
+                          ✓ You already made a review
                         </span>
                       )}
                     </td>

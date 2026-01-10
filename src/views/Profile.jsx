@@ -19,9 +19,11 @@ const Profile = () => {
   const [successMessage, setSuccessMessage] = useState(null);
   const [profilePictureFile, setProfilePictureFile] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
+  const [imageRefreshKey, setImageRefreshKey] = useState(Date.now());
   const [formData, setFormData] = useState({
     name: '',
-    phone_number: ''
+    phone_number: '',
+    location: ''
   });
   
   // Change password states
@@ -59,6 +61,8 @@ const Profile = () => {
         
         const data = await getCustomerProfile();
         console.log('✅ Profile data received:', data);
+        console.log('📸 Avatar field:', data.avatar);
+        console.log('📸 ProfilePicture field:', data.profilePicture);
         
         // Format data for display
         const userData = {
@@ -66,7 +70,8 @@ const Profile = () => {
           name: data.name,
           email: data.email,
           phone: data.phone_number || 'Not specified',
-          profilePicture: data.profilePicture,
+          location: data.location || 'Not specified',
+          profilePicture: data.avatar || data.profilePicture,
           registerDate: data.register_date,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt
@@ -129,7 +134,8 @@ const Profile = () => {
     if (user) {
       setFormData({
         name: user.name || '',
-        phone_number: user.phone || ''
+        phone_number: user.phone || '',
+        location: user.location === 'Not specified' ? '' : (user.location || '')
       });
       setProfilePictureFile(null);
       setProfilePicturePreview(null);
@@ -300,12 +306,16 @@ const Profile = () => {
         name: refreshedProfile.name,
         email: refreshedProfile.email,
         phone: refreshedProfile.phone_number || 'Not specified',
-        profilePicture: refreshedProfile.profilePicture,
+        location: refreshedProfile.location || 'Not specified',
+        profilePicture: refreshedProfile.avatar || refreshedProfile.profilePicture,
         registerDate: refreshedProfile.register_date,
         createdAt: refreshedProfile.createdAt,
         updatedAt: refreshedProfile.updatedAt
       };
       setUser(userData);
+      
+      // Force image refresh by updating the key
+      setImageRefreshKey(Date.now());
       
       // Clear file input
       setProfilePictureFile(null);
@@ -416,10 +426,11 @@ const Profile = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
             {user.profilePicture ? (
               <img
+                key={imageRefreshKey}
                 src={
                   user.profilePicture.startsWith('http') 
-                    ? user.profilePicture 
-                    : `http://localhost:5000${user.profilePicture}`
+                    ? `${user.profilePicture}?t=${imageRefreshKey}`
+                    : `http://localhost:5000${user.profilePicture}?t=${imageRefreshKey}`
                 }
                 alt={user.name}
                 style={{
@@ -473,6 +484,10 @@ const Profile = () => {
             <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #3498db' }}>
               <strong style={{ color: '#555' }}>📱 Phone:</strong>
               <span style={{ marginLeft: '1rem', color: '#2c3e50' }}>{user.phone}</span>
+            </div>
+            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #3498db' }}>
+              <strong style={{ color: '#555' }}>📍 Location:</strong>
+              <span style={{ marginLeft: '1rem', color: '#2c3e50' }}>{user.location}</span>
             </div>
           </div>
         </div>
@@ -675,6 +690,36 @@ const Profile = () => {
                   onChange={handleInputChange}
                   required
                   placeholder="Your phone number"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label 
+                  htmlFor="location"
+                  style={{
+                    display: 'block',
+                    fontWeight: '600',
+                    marginBottom: '0.5rem',
+                    color: '#2c3e50'
+                  }}
+                >
+                  Location
+                </label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  placeholder="Your location (e.g., Nablus, Rafidia Street)"
                   style={{
                     width: '100%',
                     padding: '0.75rem',
