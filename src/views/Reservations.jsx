@@ -28,6 +28,9 @@ const Reservations = () => {
   const [replyType, setReplyType] = useState('accept');
   const [negotiationNote, setNegotiationNote] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  
+  // Expanded descriptions state
+  const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
 
   useEffect(() => {
     // Check authentication
@@ -229,6 +232,18 @@ const Reservations = () => {
     return colors[status] || '#7f8c8d';
   };
 
+  const toggleDescription = (reservationId) => {
+    setExpandedDescriptions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(reservationId)) {
+        newSet.delete(reservationId);
+      } else {
+        newSet.add(reservationId);
+      }
+      return newSet;
+    });
+  };
+
   if (loading) {
     return <Loading />;
   }
@@ -260,7 +275,12 @@ const Reservations = () => {
     <div className="reservations-page">
       <div className="container">
         <div className="page-header">
-          <h1 className="page-title">My Reservations</h1>
+          <h1 className="page-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '32px', height: '32px', verticalAlign: 'middle', marginRight: '12px'}}>
+              <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+            </svg>
+            My Reservations
+          </h1>
           <p className="page-subtitle">
             View and manage your service reservations
           </p>
@@ -324,7 +344,11 @@ const Reservations = () => {
             borderRadius: '12px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
           }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📭</div>
+            <div style={{ marginBottom: '1rem' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '80px', height: '80px', color: '#95a5a6'}}>
+                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/>
+              </svg>
+            </div>
             <h3>No reservations yet</h3>
             <p style={{ color: '#7f8c8d', marginBottom: '1.5rem' }}>
               {filterStatus === 'all' 
@@ -347,183 +371,174 @@ const Reservations = () => {
             </button>
           </div>
         ) : (
-          <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            overflow: 'hidden'
-          }}>
-            <table style={{
-              width: '100%',
-              borderCollapse: 'collapse'
-            }}>
-              <thead style={{ background: '#f8f9fa' }}>
-                <tr>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Artisan</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Craft Type</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Location</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Description</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Start Date</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Status</th>
-                  <th style={{ padding: '1rem', textAlign: 'right', borderBottom: '2px solid #dee2e6' }}>Price</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Booked On</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '2px solid #dee2e6' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredReservations.map((reservation) => (
-                  <tr key={reservation._id} style={{ borderBottom: '1px solid #dee2e6' }}>
-                    <td style={{ padding: '1rem' }}>
-                      <div>
-                        <strong>{reservation.artisan?.name || 'N/A'}</strong>
-                        {reservation.artisan?.phone_number && (
-                          <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>
-                            📱 {reservation.artisan.phone_number}
-                          </div>
-                        )}
+          <div className="reservations-cards-container">
+            {filteredReservations.map((reservation) => {
+              const isExpanded = expandedDescriptions.has(reservation._id);
+              const description = reservation.description || 'No description provided';
+              const shouldShowReadMore = description.length > 100;
+              
+              return (
+                <div key={reservation._id} className="reservation-card">
+                  {/* Card Header */}
+                  <div className="card-header">
+                    <div className="header-left">
+                      <div className="artisan-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
                       </div>
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        background: '#e8f4f8',
-                        color: '#2c3e50',
-                        borderRadius: '12px',
-                        fontSize: '0.9rem'
-                      }}>
-                        {reservation.artisan?.craftType || 'N/A'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        📍 {reservation.artisan?.location || 'N/A'}
+                      <div className="artisan-details">
+                        <h3 className="artisan-name">{reservation.artisan?.name || 'N/A'}</h3>
+                        <span className="craft-type">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
+                          </svg>
+                          {reservation.artisan?.craftType || 'N/A'}
+                        </span>
                       </div>
-                    </td>
-                    <td style={{ padding: '1rem', maxWidth: '200px' }}>
-                      <div style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }} title={reservation.description}>
-                        {reservation.description}
-                      </div>
-                    </td>
-                    <td style={{ padding: '1rem', whiteSpace: 'nowrap' }}>
-                      {formatDate(reservation.start_date)}
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{
-                        padding: '0.35rem 0.75rem',
-                        background: getStatusColor(reservation.status),
-                        color: 'white',
-                        borderRadius: '12px',
-                        fontSize: '0.85rem',
-                        fontWeight: 'bold'
+                    </div>
+                    <div className="header-right">
+                      <span className="status-badge" style={{
+                        backgroundColor: getStatusColor(reservation.status)
                       }}>
                         {getDisplayStatus(reservation.status)}
                       </span>
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold', color: '#27ae60' }}>
-                      ${reservation.agreed_price || reservation.total_price || 0}
-                    </td>
-                    <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#7f8c8d', whiteSpace: 'nowrap' }}>
-                      {formatDate(reservation.createdAt)}
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'center', minWidth: '150px' }}>
-                      {(reservation.status === 'Price_Proposed' || reservation.status === 'Negotiating') && reservation.agreed_price > 0 && (
-                        <button
-                          onClick={() => handleOpenReplyModal(reservation)}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            background: '#f39c12',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '0.9rem',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                            transition: 'background 0.3s ease',
-                            whiteSpace: 'nowrap'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.background = '#e67e22';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.background = '#f39c12';
-                          }}
+                      <div className="price-tag">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                        </svg>
+                        ${reservation.agreed_price || reservation.total_price || 0}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="card-body">
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <div className="info-label">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                          </svg>
+                          Location
+                        </div>
+                        <div className="info-value">{reservation.artisan?.location || 'N/A'}</div>
+                      </div>
+
+                      <div className="info-item">
+                        <div className="info-label">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                          </svg>
+                          Phone
+                        </div>
+                        <div className="info-value">{reservation.artisan?.phone_number || 'N/A'}</div>
+                      </div>
+
+                      <div className="info-item">
+                        <div className="info-label">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/>
+                          </svg>
+                          Start Date
+                        </div>
+                        <div className="info-value">{formatDate(reservation.start_date)}</div>
+                      </div>
+
+                      <div className="info-item">
+                        <div className="info-label">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                          </svg>
+                          Booked On
+                        </div>
+                        <div className="info-value">{formatDate(reservation.createdAt)}</div>
+                      </div>
+                    </div>
+
+                    <div className="description-section">
+                      <div className="info-label">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                        </svg>
+                        Description
+                      </div>
+                      <p className={`description-text ${isExpanded ? 'expanded' : 'collapsed'}`}>
+                        {description}
+                      </p>
+                      {shouldShowReadMore && (
+                        <button 
+                          onClick={() => toggleDescription(reservation._id)}
+                          className="read-more-btn"
                         >
-                          💰 Respond (${reservation.agreed_price})
+                          {isExpanded ? (
+                            <>
+                              Show Less
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+                              </svg>
+                            </>
+                          ) : (
+                            <>
+                              Read More
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                              </svg>
+                            </>
+                          )}
                         </button>
                       )}
-                      {reservation.status === 'New' && (
-                        <button
-                          onClick={() => handleCancelReservation(reservation._id)}
-                          disabled={cancellingId === reservation._id}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            background: cancellingId === reservation._id ? '#95a5a6' : '#e74c3c',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '0.9rem',
-                            cursor: cancellingId === reservation._id ? 'not-allowed' : 'pointer',
-                            opacity: cancellingId === reservation._id ? 0.6 : 1,
-                            transition: 'background 0.3s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (cancellingId !== reservation._id) {
-                              e.target.style.background = '#c0392b';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (cancellingId !== reservation._id) {
-                              e.target.style.background = '#e74c3c';
-                            }
-                          }}
-                        >
-                          {cancellingId === reservation._id ? 'Cancelling...' : 'Cancel'}
-                        </button>
-                      )}
-                      {reservation.status === 'Completed' && reservation.artisan?._id && !reviewedArtisans.has(reservation.artisan._id) && (
-                        <button
-                          onClick={() => handleOpenReviewForm(reservation._id)}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            background: '#27ae60',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '0.9rem',
-                            cursor: 'pointer',
-                            transition: 'background 0.3s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.background = '#229954';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.background = '#27ae60';
-                          }}
-                        >
-                          Add Review
-                        </button>
-                      )}
-                      {reservation.status === 'Completed' && reservation.artisan?._id && reviewedArtisans.has(reservation.artisan._id) && (
-                        <span style={{
-                          padding: '0.5rem 1rem',
-                          background: '#95a5a6',
-                          color: 'white',
-                          borderRadius: '6px',
-                          fontSize: '0.9rem',
-                          display: 'inline-block'
-                        }}>
-                          ✓ You already made a review
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+
+                  {/* Card Footer - Actions */}
+                  <div className="card-footer">
+                    {(reservation.status === 'Price_Proposed' || reservation.status === 'Negotiating') && reservation.agreed_price > 0 && (
+                      <button
+                        onClick={() => handleOpenReplyModal(reservation)}
+                        className="btn-respond"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                        </svg>
+                        Respond to Price (${reservation.agreed_price})
+                      </button>
+                    )}
+                    {reservation.status === 'New' && (
+                      <button
+                        onClick={() => handleCancelReservation(reservation._id)}
+                        disabled={cancellingId === reservation._id}
+                        className="btn-cancel"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                        {cancellingId === reservation._id ? 'Cancelling...' : 'Cancel Reservation'}
+                      </button>
+                    )}
+                    {reservation.status === 'Completed' && reservation.artisan?._id && !reviewedArtisans.has(reservation.artisan._id) && (
+                      <button
+                        onClick={() => handleOpenReviewForm(reservation._id)}
+                        className="btn-review"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                        </svg>
+                        Add Review
+                      </button>
+                    )}
+                    {reservation.status === 'Completed' && reservation.artisan?._id && reviewedArtisans.has(reservation.artisan._id) && (
+                      <div className="reviewed-badge">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                        Review Submitted
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -690,7 +705,12 @@ const Reservations = () => {
               boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
             }}>
               <div style={{ marginBottom: '1.5rem' }}>
-                <h2 style={{ margin: '0 0 0.5rem 0', color: '#2c3e50' }}>💰 Respond to Price Proposal</h2>
+                <h2 style={{ margin: '0 0 0.5rem 0', color: '#2c3e50', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '28px', height: '28px', color: '#f39c12'}}>
+                    <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                  </svg>
+                  Respond to Price Proposal
+                </h2>
                 <p style={{ color: '#7f8c8d', margin: 0 }}>
                   <strong>{selectedReservation.title || 'Service Request'}</strong>
                 </p>
@@ -733,8 +753,13 @@ const Reservations = () => {
                       onChange={(e) => setReplyType(e.target.value)}
                       style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                     />
-                    <div>
-                      <div style={{ fontWeight: 'bold', color: '#27ae60' }}>✓ Accept Price</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 'bold', color: '#27ae60', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '20px', height: '20px'}}>
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                        Accept Price
+                      </div>
                       <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>I agree with the proposed price</div>
                     </div>
                   </label>
@@ -758,8 +783,13 @@ const Reservations = () => {
                       onChange={(e) => setReplyType(e.target.value)}
                       style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                     />
-                    <div>
-                      <div style={{ fontWeight: 'bold', color: '#e74c3c' }}>✗ Reject Price</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 'bold', color: '#e74c3c', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '20px', height: '20px'}}>
+                          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                        Reject Price
+                      </div>
                       <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>Price is not acceptable</div>
                     </div>
                   </label>
@@ -783,8 +813,13 @@ const Reservations = () => {
                       onChange={(e) => setReplyType(e.target.value)}
                       style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                     />
-                    <div>
-                      <div style={{ fontWeight: 'bold', color: '#f39c12' }}>💬 Negotiate Price</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 'bold', color: '#f39c12', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '20px', height: '20px'}}>
+                          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                        </svg>
+                        Negotiate Price
+                      </div>
                       <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>Propose a different price</div>
                     </div>
                   </label>
@@ -851,7 +886,21 @@ const Reservations = () => {
                     opacity: submittingReply || (replyType === 'negotiate' && !negotiationNote.trim()) ? 0.6 : 1
                   }}
                 >
-                  {submittingReply ? '⏳ Submitting...' : '✓ Submit Response'}
+                  {submittingReply ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '18px', height: '18px', marginRight: '6px', animation: 'spin 1s linear infinite'}}>
+                        <path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6z"/>
+                      </svg>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '18px', height: '18px', marginRight: '6px'}}>
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      </svg>
+                      Submit Response
+                    </>
+                  )}
                 </button>
               </div>
             </div>
