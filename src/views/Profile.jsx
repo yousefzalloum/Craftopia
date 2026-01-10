@@ -351,171 +351,209 @@ const Profile = () => {
 
   return (
     <div className="profile-page">
-      <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 20px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <button 
-              onClick={() => navigate(-1)} 
-              style={{ padding: '0.5rem 1rem', background: 'white', border: '2px solid #ddd', borderRadius: '8px', cursor: 'pointer', marginRight: '1rem' }}
-            >
-              ← Back
-            </button>
-            <h1 style={{ margin: 0 }}>My Profile</h1>
-          </div>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button 
-              onClick={handleOpenPasswordModal}
-              style={{ 
-                padding: '0.75rem 1.5rem', 
-                background: '#e74c3c', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '8px', 
-                cursor: 'pointer',
-                fontWeight: '600',
-                transition: 'background 0.3s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#c0392b'}
-              onMouseLeave={(e) => e.target.style.background = '#e74c3c'}
-            >
-              🔒 Change Password
-            </button>
-            <button 
-              onClick={handleOpenEditModal}
-              style={{ 
-                padding: '0.75rem 1.5rem', 
-                background: '#667eea', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '8px', 
-                cursor: 'pointer',
-                fontWeight: '600',
-                transition: 'background 0.3s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#5568d3'}
-              onMouseLeave={(e) => e.target.style.background = '#667eea'}
-            >
-              ✏️ Edit Profile
-            </button>
-          </div>
-        </div>
-        
+      <div className="profile-container-modern">
+        {/* Back Navigation */}
+        <button onClick={() => navigate(-1)} className="profile-back-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <span>Back</span>
+        </button>
+
         {/* Success Message */}
         {successMessage && (
-          <div style={{
-            background: '#d4edda',
-            color: '#155724',
-            padding: '1rem',
-            borderRadius: '8px',
-            marginBottom: '1.5rem',
-            border: '1px solid #c3e6cb',
-            fontWeight: '600'
-          }}>
-            ✅ {successMessage}
+          <div className="profile-success-message">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <span>{successMessage}</span>
           </div>
         )}
-        
-        {/* Profile Header */}
-        <div style={{
-          background: 'white',
-          padding: '2rem',
-          borderRadius: '16px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          marginBottom: '1.5rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            {user.profilePicture ? (
-              <img
-                key={imageRefreshKey}
-                src={
-                  user.profilePicture.startsWith('http') 
-                    ? `${user.profilePicture}?t=${imageRefreshKey}`
-                    : `http://localhost:5000${user.profilePicture}?t=${imageRefreshKey}`
-                }
-                alt={user.name}
-                style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '4px solid #667eea'
-                }}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-            ) : null}
-            <div style={{
-              width: '100px',
-              height: '100px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              display: user.profilePicture ? 'none' : 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '2.5rem',
-              fontWeight: 'bold'
-            }}>
-              {user.name.charAt(0).toUpperCase()}
+
+        {/* Main Profile Card */}
+        <div className="profile-main-card">
+          {/* Header Section with User Avatar and Info */}
+          <div className="profile-header-section">
+            <div className="profile-decoration-circle"></div>
+            <div className="profile-avatar-container">
+              {user.profilePicture ? (
+                <img
+                  key={imageRefreshKey}
+                  src={
+                    user.profilePicture.startsWith('http') 
+                      ? `${user.profilePicture}?t=${imageRefreshKey}`
+                      : `http://localhost:5000${user.profilePicture}?t=${imageRefreshKey}`
+                  }
+                  alt={user.name}
+                  className="profile-avatar-img"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div 
+                className="profile-avatar-placeholder"
+                style={{ display: user.profilePicture ? 'none' : 'flex' }}
+              >
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </div>
+              <div className="profile-status-badge">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="#10b981">
+                  <circle cx="6" cy="6" r="6"/>
+                </svg>
+              </div>
             </div>
-            <div>
-              <h2 style={{ margin: '0 0 0.5rem 0', color: '#2c3e50' }}>{user.name}</h2>
-              <p style={{ margin: 0, color: '#7f8c8d' }}>Customer Account</p>
+            
+            <div className="profile-header-info">
+              <h1 className="profile-name">{user.name}</h1>
+              <p className="profile-role">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Customer Account
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="profile-actions">
+              <button onClick={handleOpenEditModal} className="profile-action-btn primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Edit Profile
+              </button>
+              <button onClick={handleOpenPasswordModal} className="profile-action-btn secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Change Password
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Contact Information */}
-        <div style={{
-          background: 'white',
-          padding: '2rem',
-          borderRadius: '16px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          marginBottom: '1.5rem'
-        }}>
-          <h3 style={{ marginTop: 0, color: '#2c3e50' }}>📞 Contact Information</h3>
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #3498db' }}>
-              <strong style={{ color: '#555' }}>📧 Email:</strong>
-              <span style={{ marginLeft: '1rem', color: '#2c3e50' }}>{user.email}</span>
+          {/* Contact Information Section */}
+          <div className="profile-section">
+            <div className="profile-section-header">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              <h2>Contact Information</h2>
             </div>
-            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #3498db' }}>
-              <strong style={{ color: '#555' }}>📱 Phone:</strong>
-              <span style={{ marginLeft: '1rem', color: '#2c3e50' }}>{user.phone}</span>
-            </div>
-            <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #3498db' }}>
-              <strong style={{ color: '#555' }}>📍 Location:</strong>
-              <span style={{ marginLeft: '1rem', color: '#2c3e50' }}>{user.location}</span>
+            
+            <div className="profile-info-grid">
+              <div className="profile-info-card">
+                <div className="info-icon email">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                </div>
+                <div className="info-content">
+                  <span className="info-label">Email Address</span>
+                  <span className="info-value">{user.email}</span>
+                </div>
+              </div>
+
+              <div className="profile-info-card">
+                <div className="info-icon phone">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                </div>
+                <div className="info-content">
+                  <span className="info-label">Phone Number</span>
+                  <span className="info-value">{user.phone}</span>
+                </div>
+              </div>
+
+              <div className="profile-info-card">
+                <div className="info-icon location">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                </div>
+                <div className="info-content">
+                  <span className="info-label">Location</span>
+                  <span className="info-value">{user.location}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Account Details */}
-        <div style={{
-          background: 'white',
-          padding: '2rem',
-          borderRadius: '16px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ marginTop: 0, color: '#2c3e50' }}>ℹ️ Account Details</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-            <div style={{ padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', borderLeft: '4px solid #3498db' }}>
-              <strong style={{ display: 'block', color: '#7f8c8d', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>User ID</strong>
-              <span style={{ color: '#2c3e50', fontWeight: '600', wordBreak: 'break-all' }}>{user.id}</span>
+          {/* Account Details Section */}
+          <div className="profile-section">
+            <div className="profile-section-header">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <h2>Account Details</h2>
             </div>
-            <div style={{ padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', borderLeft: '4px solid #27ae60' }}>
-              <strong style={{ display: 'block', color: '#7f8c8d', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Registered</strong>
-              <span style={{ color: '#2c3e50', fontWeight: '600' }}>{formatDate(user.registerDate)}</span>
-            </div>
-            <div style={{ padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', borderLeft: '4px solid #f39c12' }}>
-              <strong style={{ display: 'block', color: '#7f8c8d', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Created At</strong>
-              <span style={{ color: '#2c3e50', fontWeight: '600' }}>{formatDate(user.createdAt)}</span>
-            </div>
-            <div style={{ padding: '1.5rem', background: '#f8f9fa', borderRadius: '12px', borderLeft: '4px solid #9b59b6' }}>
-              <strong style={{ display: 'block', color: '#7f8c8d', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Last Updated</strong>
-              <span style={{ color: '#2c3e50', fontWeight: '600' }}>{formatDate(user.updatedAt)}</span>
+            
+            <div className="profile-details-grid">
+              <div className="profile-detail-item">
+                <div className="detail-icon-wrapper blue">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </div>
+                <div className="detail-content">
+                  <span className="detail-label">User ID</span>
+                  <span className="detail-value">{user.id}</span>
+                </div>
+              </div>
+
+              <div className="profile-detail-item">
+                <div className="detail-icon-wrapper green">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                </div>
+                <div className="detail-content">
+                  <span className="detail-label">Registration Date</span>
+                  <span className="detail-value">{formatDate(user.registerDate)}</span>
+                </div>
+              </div>
+
+              <div className="profile-detail-item">
+                <div className="detail-icon-wrapper orange">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                <div className="detail-content">
+                  <span className="detail-label">Account Created</span>
+                  <span className="detail-value">{formatDate(user.createdAt)}</span>
+                </div>
+              </div>
+
+              <div className="profile-detail-item">
+                <div className="detail-icon-wrapper purple">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                </div>
+                <div className="detail-content">
+                  <span className="detail-label">Last Updated</span>
+                  <span className="detail-value">{formatDate(user.updatedAt)}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -523,133 +561,82 @@ const Profile = () => {
 
       {/* Edit Profile Modal */}
       {isEditModalOpen && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-          onClick={handleCloseEditModal}
-        >
-          <div 
-            style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: '16px',
-              maxWidth: '500px',
-              width: '90%',
-              maxHeight: '90vh',
-              overflowY: 'auto'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ margin: 0 }}>✏️ Edit Profile</h2>
-              <button 
-                onClick={handleCloseEditModal}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#7f8c8d'
-                }}
-              >
-                ✕
+        <div className="profile-modal-overlay" onClick={handleCloseEditModal}>
+          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-modal-header">
+              <div className="modal-title-wrapper">
+                <div className="modal-icon-circle">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </div>
+                <h2>Edit Your Profile</h2>
+              </div>
+              <button onClick={handleCloseEditModal} className="profile-modal-close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
               </button>
             </div>
-            
-            <form onSubmit={handleSubmitEdit}>
+
+            <form onSubmit={handleSubmitEdit} className="profile-modal-form">
               {editError && (
-                <div style={{
-                  background: '#f8d7da',
-                  color: '#721c24',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  marginBottom: '1rem',
-                  border: '1px solid #f5c6cb'
-                }}>
-                  ❌ {editError}
+                <div className="profile-alert error">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                  <span>{editError}</span>
                 </div>
               )}
-              
+
               {successMessage && (
-                <div style={{
-                  background: '#d4edda',
-                  color: '#155724',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  marginBottom: '1rem',
-                  border: '1px solid #c3e6cb'
-                }}>
-                  ✅ {successMessage}
+                <div className="profile-alert success">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  <span>{successMessage}</span>
                 </div>
               )}
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label 
-                  htmlFor="profilePicture"
-                  style={{
-                    display: 'block',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem',
-                    color: '#2c3e50'
-                  }}
-                >
-                  Profile Picture
-                </label>
-                <input
-                  type="file"
-                  id="profilePicture"
-                  accept="image/*"
-                  onChange={handleProfilePictureChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '2px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '0.95rem',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                {profilePicturePreview && (
-                  <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                    <img 
-                      src={profilePicturePreview} 
-                      alt="Preview" 
-                      style={{ 
-                        width: '120px', 
-                        height: '120px', 
-                        objectFit: 'cover', 
-                        borderRadius: '50%',
-                        border: '3px solid #667eea'
-                      }} 
-                    />
+
+              <div className="profile-form-group">
+                <label htmlFor="profilePicture" className="profile-file-upload">
+                  <div className="file-upload-preview">
+                    {profilePicturePreview ? (
+                      <img src={profilePicturePreview} alt="Preview" className="upload-preview-img" />
+                    ) : (
+                      <div className="upload-placeholder">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                          <circle cx="8.5" cy="8.5" r="1.5"/>
+                          <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span>Upload Profile Picture</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '0.5rem', display: 'block' }}>
-                  Upload an image file (max 5MB)
-                </small>
+                  <input
+                    type="file"
+                    id="profilePicture"
+                    accept="image/*"
+                    onChange={handleProfilePictureChange}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                <p className="profile-input-hint">Max size: 5MB | Formats: JPG, PNG, GIF</p>
               </div>
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label 
-                  htmlFor="name"
-                  style={{
-                    display: 'block',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem',
-                    color: '#2c3e50'
-                  }}
-                >
-                  Name *
+
+              <div className="profile-form-group">
+                <label htmlFor="name" className="profile-input-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  Full Name
                 </label>
                 <input
                   type="text"
@@ -658,29 +645,17 @@ const Profile = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   required
-                  placeholder="Your full name"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
+                  placeholder="Enter your full name"
+                  className="profile-input"
                 />
               </div>
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label 
-                  htmlFor="phone_number"
-                  style={{
-                    display: 'block',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem',
-                    color: '#2c3e50'
-                  }}
-                >
-                  Phone Number *
+
+              <div className="profile-form-group">
+                <label htmlFor="phone_number" className="profile-input-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                  Phone Number
                 </label>
                 <input
                   type="tel"
@@ -689,28 +664,17 @@ const Profile = () => {
                   value={formData.phone_number}
                   onChange={handleInputChange}
                   required
-                  placeholder="Your phone number"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
+                  placeholder="Enter your phone number"
+                  className="profile-input"
                 />
               </div>
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label 
-                  htmlFor="location"
-                  style={{
-                    display: 'block',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem',
-                    color: '#2c3e50'
-                  }}
-                >
+
+              <div className="profile-form-group">
+                <label htmlFor="location" className="profile-input-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
                   Location
                 </label>
                 <input
@@ -719,51 +683,42 @@ const Profile = () => {
                   name="location"
                   value={formData.location}
                   onChange={handleInputChange}
-                  placeholder="Your location (e.g., Nablus, Rafidia Street)"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
+                  placeholder="Enter your location"
+                  className="profile-input"
                 />
               </div>
-              
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+
+              <div className="profile-modal-actions">
                 <button
                   type="button"
                   onClick={handleCloseEditModal}
                   disabled={editLoading}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    background: '#95a5a6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: editLoading ? 'not-allowed' : 'pointer',
-                    fontWeight: '600',
-                    opacity: editLoading ? 0.6 : 1
-                  }}
+                  className="profile-btn secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={editLoading}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    background: '#667eea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: editLoading ? 'not-allowed' : 'pointer',
-                    fontWeight: '600',
-                    opacity: editLoading ? 0.6 : 1
-                  }}
+                  className="profile-btn primary"
                 >
-                  {editLoading ? 'Saving...' : 'Save Changes'}
+                  {editLoading ? (
+                    <>
+                      <svg className="spinner-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                      </svg>
+                      Save Changes
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -773,85 +728,56 @@ const Profile = () => {
 
       {/* Change Password Modal */}
       {isPasswordModalOpen && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-          onClick={handleClosePasswordModal}
-        >
-          <div 
-            style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: '16px',
-              maxWidth: '500px',
-              width: '90%'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ margin: 0 }}>🔒 Change Password</h2>
-              <button 
-                onClick={handleClosePasswordModal}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#7f8c8d'
-                }}
-              >
-                ✕
+        <div className="profile-modal-overlay" onClick={handleClosePasswordModal}>
+          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-modal-header">
+              <div className="modal-title-wrapper">
+                <div className="modal-icon-circle password">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </div>
+                <h2>Change Password</h2>
+              </div>
+              <button onClick={handleClosePasswordModal} className="profile-modal-close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
               </button>
             </div>
-            
-            <form onSubmit={handleSubmitPasswordChange}>
+
+            <form onSubmit={handleSubmitPasswordChange} className="profile-modal-form">
               {passwordError && (
-                <div style={{
-                  background: '#f8d7da',
-                  color: '#721c24',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  marginBottom: '1rem',
-                  border: '1px solid #f5c6cb'
-                }}>
-                  ❌ {passwordError}
+                <div className="profile-alert error">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                  <span>{passwordError}</span>
                 </div>
               )}
-              
+
               {passwordSuccess && (
-                <div style={{
-                  background: '#d4edda',
-                  color: '#155724',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  marginBottom: '1rem',
-                  border: '1px solid #c3e6cb'
-                }}>
-                  ✅ {passwordSuccess}
+                <div className="profile-alert success">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  <span>{passwordSuccess}</span>
                 </div>
               )}
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label 
-                  htmlFor="currentPassword"
-                  style={{
-                    display: 'block',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem',
-                    color: '#2c3e50'
-                  }}
-                >
-                  Current Password *
+
+              <div className="profile-form-group">
+                <label htmlFor="currentPassword" className="profile-input-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  Current Password
                 </label>
                 <input
                   type="password"
@@ -860,29 +786,18 @@ const Profile = () => {
                   value={passwordData.currentPassword}
                   onChange={handlePasswordInputChange}
                   required
-                  placeholder="Enter current password"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
+                  placeholder="Enter your current password"
+                  className="profile-input"
                 />
               </div>
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label 
-                  htmlFor="newPassword"
-                  style={{
-                    display: 'block',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem',
-                    color: '#2c3e50'
-                  }}
-                >
-                  New Password *
+
+              <div className="profile-form-group">
+                <label htmlFor="newPassword" className="profile-input-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  New Password
                 </label>
                 <input
                   type="password"
@@ -893,28 +808,17 @@ const Profile = () => {
                   required
                   placeholder="Enter new password (min 6 characters)"
                   minLength="6"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
+                  className="profile-input"
                 />
               </div>
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label 
-                  htmlFor="confirmPassword"
-                  style={{
-                    display: 'block',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem',
-                    color: '#2c3e50'
-                  }}
-                >
-                  Confirm New Password *
+
+              <div className="profile-form-group">
+                <label htmlFor="confirmPassword" className="profile-input-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  Confirm New Password
                 </label>
                 <input
                   type="password"
@@ -923,51 +827,41 @@ const Profile = () => {
                   value={passwordData.confirmPassword}
                   onChange={handlePasswordInputChange}
                   required
-                  placeholder="Confirm new password"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box'
-                  }}
+                  placeholder="Confirm your new password"
+                  className="profile-input"
                 />
               </div>
-              
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+
+              <div className="profile-modal-actions">
                 <button
                   type="button"
                   onClick={handleClosePasswordModal}
                   disabled={passwordLoading}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    background: '#95a5a6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: passwordLoading ? 'not-allowed' : 'pointer',
-                    fontWeight: '600',
-                    opacity: passwordLoading ? 0.6 : 1
-                  }}
+                  className="profile-btn secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={passwordLoading}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    background: '#e74c3c',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: passwordLoading ? 'not-allowed' : 'pointer',
-                    fontWeight: '600',
-                    opacity: passwordLoading ? 0.6 : 1
-                  }}
+                  className="profile-btn primary danger"
                 >
-                  {passwordLoading ? 'Changing...' : 'Change Password'}
+                  {passwordLoading ? (
+                    <>
+                      <svg className="spinner-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                      </svg>
+                      Changing...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                      Update Password
+                    </>
+                  )}
                 </button>
               </div>
             </form>
