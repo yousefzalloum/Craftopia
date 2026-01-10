@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import NotificationController from '../controllers/NotificationController';
+import NotificationController from '../controllers/NotificationController.jsx';
 import NotificationCard from '../components/NotificationCard';
 import Loading from '../components/Loading';
 import '../styles/Notifications.css';
@@ -181,14 +181,20 @@ const Notifications = () => {
                 className="btn-mark-all-read"
                 onClick={handleMarkAllAsRead}
               >
-                ✓ Mark All as Read
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                </svg>
+                Mark All as Read
               </button>
             )}
             <button 
               className="btn-refresh"
               onClick={fetchNotifications}
             >
-              🔄 Refresh
+              <svg className="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+              </svg>
+              Refresh
             </button>
           </div>
         </div>
@@ -202,7 +208,9 @@ const Notifications = () => {
 
         {filteredNotifications.length === 0 ? (
           <div className="no-notifications">
-            <div className="no-notifications-icon">🔔</div>
+            <svg className="no-notifications-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+            </svg>
             <h2>No notifications</h2>
             <p>
               {filter === 'unread' 

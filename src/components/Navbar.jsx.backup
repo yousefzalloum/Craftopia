@@ -1,8 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import NotificationController from '../controllers/NotificationController.jsx';
-import hammerLogo from '../assets/images/hammer.png';
+import NotificationController from '../controllers/NotificationController';
 import '../styles/Navbar.css';
 
 const Navbar = () => {
@@ -47,7 +46,9 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">
-          <img src={hammerLogo} alt="Craftopia" className="logo-icon" />
+          <svg className="logo-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.9,6.6l-3-3C17.5,3.2,17,3,16.5,3h-9C7,3,6.5,3.2,6.1,3.6l-3,3C2.4,7.2,2,8,2,8.5V19c0,1.1,0.9,2,2,2h16c1.1,0,2-0.9,2-2V8.5C22,8,21.6,7.2,20.9,6.6z M12,17.5L7,13h3v-3h4v3h3L12,17.5z"/>
+          </svg>
           Craftopia
         </Link>
 
@@ -118,10 +119,7 @@ const Navbar = () => {
               </li>
               <li className="navbar-item">
                 <button onClick={handleLogout} className="navbar-link navbar-btn">
-                  <svg className="nav-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-                  </svg>
-                  Logout
+                  <span className="nav-icon">⎋</span> Logout
                 </button>
               </li>
             </>
@@ -148,7 +146,7 @@ const Navbar = () => {
                 </NavLink>
               </li>
               <li className="navbar-item">
-                <NavLink to="/profile" className="navbar-link" title={displayEmail}>
+                <NavLink to="/artisan-profile" className="navbar-link" title={displayEmail}>
                   <svg className="nav-icon" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                   </svg>

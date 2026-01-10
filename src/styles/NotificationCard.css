@@ -33,6 +33,12 @@
   border-radius: 50%;
 }
 
+.notification-icon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--secondary-color);
+}
+
 .notification-content {
   flex: 1;
   display: flex;
@@ -119,7 +125,13 @@
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+}
+
+.btn-update-price .btn-icon,
+.btn-reject-nego .btn-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .btn-update-price {
@@ -196,6 +208,28 @@
   font-size: 0.9rem;
   font-weight: 600;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-submit-price .btn-icon,
+.btn-cancel-price .btn-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .btn-submit-price {
@@ -243,6 +277,15 @@
   font-size: 0.85rem;
   font-weight: 500;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-mark-read .btn-icon,
+.btn-delete .btn-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .btn-mark-read {
