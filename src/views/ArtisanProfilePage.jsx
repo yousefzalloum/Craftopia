@@ -1,33 +1,29 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getArtisanProfile, updateArtisanProfile, uploadProfilePicture, uploadPortfolioImage, deletePortfolioImage, changeArtisanPassword } from '../services/craftsmanService';
+import craftsmanService from '../services/craftsmanService';
 import { get } from '../utils/api';
-import Loading from '../components/Loading';
 import '../styles/CraftsmanProfile.css';
 
-/**
- * ArtisanProfilePage - Displays the logged-in artisan's own profile
- * Fetches data from GET /artisans/profile endpoint with bearer token authentication
- */
 const ArtisanProfilePage = () => {
   const navigate = useNavigate();
-  const { isLoggedIn, role } = useAuth();
+  const { user } = useAuth();
+  
+  // State management
   const [profileData, setProfileData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [reviews, setReviews] = useState([]);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [portfolioComments, setPortfolioComments] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [successBanner, setSuccessBanner] = useState(false);
+  
+  // Modal states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   
   // Edit profile states
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
-  const [profilePictureFile, setProfilePictureFile] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
-  const [imageRefreshKey, setImageRefreshKey] = useState(Date.now());
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -35,63 +31,61 @@ const ArtisanProfilePage = () => {
     craftType: '',
     description: ''
   });
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
-  // Portfolio upload states
-  const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
+  // Portfolio states
   const [portfolioFile, setPortfolioFile] = useState(null);
   const [portfolioPreview, setPortfolioPreview] = useState(null);
   const [portfolioPrice, setPortfolioPrice] = useState('');
   const [portfolioDescription, setPortfolioDescription] = useState('');
   const [portfolioLoading, setPortfolioLoading] = useState(false);
-  const [portfolioError, setPortfolioError] = useState(null);
-  const [portfolioSuccess, setPortfolioSuccess] = useState(null);
-  const [portfolioComments, setPortfolioComments] = useState({});
-
-  // Change password states
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState(null);
-  const [passwordSuccess, setPasswordSuccess] = useState(null);
+  const [portfolioError, setPortfolioError] = useState('');
+  const [portfolioSuccess, setPortfolioSuccess] = useState('');
+  
+  // Password states
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
+  // Fetch profile data
   useEffect(() => {
-    // Check authentication
-    if (!isLoggedIn || role !== 'artisan') {
-      console.log('❌ Not authenticated as artisan');
-      alert('Please login as an artisan to view this page');
-      navigate('/login');
-      return;
-    }
-
-    // Fetch artisan profile
     const fetchProfile = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        console.log('📋 Fetching artisan profile...');
-        
-        const data = await getArtisanProfile();
+        console.log('🔍 Fetching artisan profile...');
+        const data = await craftsmanService.getArtisanProfile();
         console.log('✅ Profile data received:', data);
-        console.log('📱 Phone field:', data.phone);
-        console.log('📋 All data fields:', Object.keys(data));
-        
         setProfileData(data);
-      } catch (err) {
-        console.error('❌ Failed to fetch profile:', err);
-        setError(err.message || 'Failed to load profile');
+        setFormData({
+          name: data.name || '',
+          phone: data.phone || '',
+          location: data.location || '',
+          craftType: data.craftType || '',
+          description: data.description || ''
+        });
+      } catch (error) {
+        console.error('❌ Error fetching profile:', error);
+        console.error('Error details:', error.response?.data || error.message);
+        // Set loading to false even on error so the page doesn't stay white
+        setLoading(false);
+        alert('Failed to load profile. Please make sure you are logged in as an artisan.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [isLoggedIn, role, navigate]);
+  }, []);
 
-  // Fetch reviews for this artisan
+  // Fetch reviews
   useEffect(() => {
     const fetchReviews = async () => {
       if (!profileData || !profileData._id) return;
@@ -99,20 +93,14 @@ const ArtisanProfilePage = () => {
       try {
         setReviewsLoading(true);
         console.log('📋 Fetching reviews for artisan:', profileData._id);
-        console.log('📋 Using endpoint: /reviews/' + profileData._id);
         const data = await get(`/reviews/${profileData._id}`);
-        console.log('✅ Reviews fetched - RAW DATA:', data);
-        console.log('✅ Is Array?', Array.isArray(data));
-        console.log('✅ Data type:', typeof data);
+        console.log('✅ Reviews fetched:', data);
         
         if (Array.isArray(data)) {
-          console.log('✅ Setting reviews array with length:', data.length);
           setReviews(data);
         } else if (data && Array.isArray(data.reviews)) {
-          console.log('✅ Setting reviews from data.reviews with length:', data.reviews.length);
           setReviews(data.reviews);
         } else {
-          console.log('⚠️ No valid reviews found, data structure:', data);
           setReviews([]);
         }
       } catch (err) {
@@ -128,17 +116,19 @@ const ArtisanProfilePage = () => {
     }
   }, [profileData]);
 
-  // Fetch comments for portfolio images
+  // Fetch portfolio comments
   useEffect(() => {
     const fetchAllPortfolioComments = async () => {
-      if (!profileData || !profileData.portfolioImages || profileData.portfolioImages.length === 0) return;
+      if (!profileData?.portfolioImages || profileData.portfolioImages.length === 0) return;
       
       try {
         console.log('📝 Fetching comments for portfolio images...');
         const commentsData = {};
         
         for (let i = 0; i < profileData.portfolioImages.length; i++) {
-          const imageUrl = profileData.portfolioImages[i];
+          const item = profileData.portfolioImages[i];
+          const imageUrl = typeof item === 'string' ? item : item.imageUrl;
+          
           try {
             const comments = await get(`/portfolio/comments?imageUrl=${encodeURIComponent(imageUrl)}`);
             commentsData[i] = Array.isArray(comments) ? comments : [];
@@ -160,31 +150,160 @@ const ArtisanProfilePage = () => {
     }
   }, [profileData]);
 
-  if (loading) {
-    return <Loading />;
-  }
+  // Handlers
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
-  if (error) {
-    return (
-      <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>
-        <h2>Error Loading Profile</h2>
-        <p className="error-message">{error}</p>
-        <button onClick={() => navigate(-1)} className="btn-back">Go Back</button>
-      </div>
-    );
-  }
+  const handleProfilePictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfilePicture(file);
+      setProfilePicturePreview(URL.createObjectURL(file));
+    }
+  };
 
-  if (!profileData) {
-    return (
-      <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>
-        <h2>Profile not found</h2>
-        <button onClick={() => navigate(-1)} className="btn-back">Go Back</button>
-      </div>
-    );
-  }
+  const handleSubmitEdit = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    setEditError('');
+    setSuccessMessage('');
+
+    try {
+      let updatedData = { ...formData };
+
+      if (profilePicture) {
+        const pictureFormData = new FormData();
+        pictureFormData.append('profilePicture', profilePicture);
+        const uploadResponse = await craftsmanService.uploadProfilePicture(pictureFormData);
+        updatedData.profilePicture = uploadResponse.profilePicture;
+      }
+
+      const response = await craftsmanService.updateArtisanProfile(updatedData);
+      setProfileData(response);
+      setSuccessMessage('Profile updated successfully!');
+      setSuccessBanner(true);
+      
+      setTimeout(() => {
+        setIsEditModalOpen(false);
+        setSuccessBanner(false);
+        setProfilePicture(null);
+        setProfilePicturePreview(null);
+      }, 2000);
+    } catch (error) {
+      setEditError(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handlePortfolioFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPortfolioFile(file);
+      setPortfolioPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handlePortfolioUpload = async () => {
+    if (!portfolioFile || !portfolioPrice || !portfolioDescription) {
+      setPortfolioError('Please fill all fields');
+      return;
+    }
+
+    setPortfolioLoading(true);
+    setPortfolioError('');
+    setPortfolioSuccess('');
+
+    try {
+      const formData = new FormData();
+      formData.append('portfolioImage', portfolioFile);
+      formData.append('price', portfolioPrice);
+      formData.append('description', portfolioDescription);
+
+      const response = await craftsmanService.uploadPortfolioImage(formData);
+      setProfileData(response);
+      setPortfolioSuccess('Portfolio image uploaded successfully!');
+      
+      setTimeout(() => {
+        setIsPortfolioModalOpen(false);
+        setPortfolioFile(null);
+        setPortfolioPreview(null);
+        setPortfolioPrice('');
+        setPortfolioDescription('');
+        setPortfolioSuccess('');
+      }, 2000);
+    } catch (error) {
+      setPortfolioError(error.response?.data?.message || 'Failed to upload image');
+    } finally {
+      setPortfolioLoading(false);
+    }
+  };
+
+  const handleDeletePortfolioImage = async (imageUrl) => {
+    if (!window.confirm('Are you sure you want to delete this portfolio image?')) return;
+
+    try {
+      const response = await craftsmanService.deletePortfolioImage({ imageUrl });
+      setProfileData(response);
+      setSuccessBanner(true);
+      setTimeout(() => setSuccessBanner(false), 3000);
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to delete image');
+    }
+  };
+
+  const handlePasswordInputChange = (e) => {
+    setPasswordData({
+      ...passwordData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmitPasswordChange = async (e) => {
+    e.preventDefault();
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    try {
+      await craftsmanService.changeArtisanPassword({
+        oldPassword: passwordData.oldPassword,
+        newPassword: passwordData.newPassword
+      });
+      
+      setPasswordSuccess('Password changed successfully!');
+      setTimeout(() => {
+        setIsPasswordModalOpen(false);
+        setPasswordData({
+          oldPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setPasswordSuccess('');
+      }, 2000);
+    } catch (error) {
+      setPasswordError(error.response?.data?.message || 'Failed to change password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -193,869 +312,655 @@ const ArtisanProfilePage = () => {
   };
 
   const formatReviewDate = (dateString) => {
-    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 
   const renderStars = (rating) => {
+    return '⭐'.repeat(Math.round(rating));
+  };
+
+  if (loading) {
     return (
-      <div style={{ display: 'flex', gap: '0.25rem', fontSize: '1.2rem' }}>
-        {[1, 2, 3, 4, 5].map((star) => (
-          <span key={star} style={{ color: star <= rating ? '#f39c12' : '#ddd' }}>
-            ★
-          </span>
-        ))}
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)'
+      }}>
+        <div style={{ textAlign: 'center', color: 'white' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
+          <h2>Loading Profile...</h2>
+        </div>
       </div>
     );
-  };
+  }
 
-  // Open edit modal and pre-fill form with current data
-  const handleOpenEditModal = () => {
-    if (profileData) {
-      setFormData({
-        name: profileData.name || '',
-        phone: profileData.phone || '',
-        location: profileData.location || '',
-        craftType: profileData.craftType || '',
-        description: profileData.description || ''
-      });
-      setProfilePictureFile(null);
-      setProfilePicturePreview(null);
-      setIsEditModalOpen(true);
-      setEditError(null);
-      setSuccessMessage(null);
-    }
-  };
-
-  // Close edit modal
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
-    setEditError(null);
-    setSuccessMessage(null);
-  };
-
-  // Handle form input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Handle profile picture file selection
-  const handleProfilePictureChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setEditError('Please select a valid image file');
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setEditError('Image size must be less than 5MB');
-        return;
-      }
-      
-      console.log('📸 Profile picture selected:', file.name);
-      setProfilePictureFile(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePicturePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-      setEditError(null);
-    }
-  };
-
-  // Handle form submission
-  const handleSubmitEdit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      setEditLoading(true);
-      setEditError(null);
-      setSuccessMessage(null);
-      
-      console.log('📝 Submitting profile update:', formData);
-      console.log('📱 Phone being sent:', formData.phone);
-      
-      // Upload profile picture first if selected
-      if (profilePictureFile) {
-        console.log('📸 Uploading profile picture...');
-        try {
-          const uploadResponse = await uploadProfilePicture(profilePictureFile);
-          console.log('✅ Profile picture uploaded:', uploadResponse);
-          console.log('📸 New profile picture path:', uploadResponse.profilePicture);
-        } catch (uploadError) {
-          console.warn('⚠️ Profile picture upload failed:', uploadError.message);
-          // Continue with other updates even if image upload fails
-        }
-      }
-      
-      // Send update request - backend uses Bearer token to identify artisan
-      await updateArtisanProfile(formData);
-      
-      console.log('✅ Profile update request successful');
-      
-      // Wait a moment for backend to process the image
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Refetch the complete profile to ensure all fields are present
-      const refreshedProfile = await getArtisanProfile();
-      console.log('✅ Refreshed profile data:', refreshedProfile);
-      console.log('📸 Profile picture field:', refreshedProfile.profilePicture);
-      console.log('� Phone number after refresh:', refreshedProfile.phone_number);
-      console.log('�📸 Profile picture field:', refreshedProfile.profilePicture);
-      console.log('📸 Full image URL will be:', refreshedProfile.profilePicture ? `${window.location.origin}${refreshedProfile.profilePicture}` : 'No profile picture');
-      
-      // Update local profile data with complete data
-      setProfileData(refreshedProfile);
-      
-      // Force image refresh by updating the key
-      setImageRefreshKey(Date.now());
-      
-      // Clear file input
-      setProfilePictureFile(null);
-      setProfilePicturePreview(null);
-      
-      // Show success message
-      setSuccessMessage('Profile updated successfully!');
-      
-      // Close modal after 1.5 seconds
-      setTimeout(() => {
-        setIsEditModalOpen(false);
-        setSuccessMessage(null);
-      }, 1500);
-      
-    } catch (err) {
-      console.error('❌ Failed to update profile:', err);
-      setEditError(err.message || 'Failed to update profile');
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
-  // Open portfolio upload modal
-  const handleOpenPortfolioModal = () => {
-    setIsPortfolioModalOpen(true);
-    setPortfolioFile(null);
-    setPortfolioPreview(null);
-    setPortfolioPrice('');
-    setPortfolioDescription('');
-    setPortfolioError(null);
-    setPortfolioSuccess(null);
-  };
-
-  // Close portfolio upload modal
-  const handleClosePortfolioModal = () => {
-    setIsPortfolioModalOpen(false);
-    setPortfolioFile(null);
-    setPortfolioPreview(null);
-    setPortfolioPrice('');
-    setPortfolioDescription('');
-    setPortfolioError(null);
-    setPortfolioSuccess(null);
-  };
-
-  // Handle portfolio file selection
-  const handlePortfolioFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setPortfolioError('Please select a valid image file');
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setPortfolioError('Image size must be less than 5MB');
-        return;
-      }
-      
-      console.log('🎨 Portfolio image selected:', file.name);
-      setPortfolioFile(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPortfolioPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-      setPortfolioError(null);
-    }
-  };
-
-  // Handle portfolio upload
-  const handlePortfolioUpload = async () => {
-    if (!portfolioFile) {
-      setPortfolioError('Please select an image first');
-      return;
-    }
-    
-    if (!portfolioPrice || portfolioPrice <= 0) {
-      setPortfolioError('Please enter a valid price');
-      return;
-    }
-    
-    if (!portfolioDescription.trim()) {
-      setPortfolioError('Please enter a description');
-      return;
-    }
-
-    try {
-      setPortfolioLoading(true);
-      setPortfolioError(null);
-      
-      console.log('🎨 Uploading portfolio image with price and description...');
-      const response = await uploadPortfolioImage(portfolioFile, portfolioPrice, portfolioDescription);
-      
-      console.log('✅ Portfolio upload successful:', response);
-      
-      // Update profile data with new portfolio from response
-      if (response.portfolio) {
-        setProfileData(prev => ({
-          ...prev,
-          portfolioImages: response.portfolio
-        }));
-      } else {
-        // Fallback: refresh profile to get updated portfolio
-        const refreshedProfile = await getArtisanProfile();
-        setProfileData(refreshedProfile);
-      }
-      
-      setPortfolioSuccess('Portfolio image added successfully!');
-      
-      // Close modal after 1.5 seconds
-      setTimeout(() => {
-        handleClosePortfolioModal();
-      }, 1500);
-      
-    } catch (err) {
-      console.error('❌ Failed to upload portfolio image:', err);
-      setPortfolioError(err.message || 'Failed to upload portfolio image');
-    } finally {
-      setPortfolioLoading(false);
-    }
-  };
-
-  // Handle portfolio image deletion
-  const handleDeletePortfolioImage = async (imageUrl) => {
-    if (!window.confirm('Are you sure you want to delete this portfolio image?')) {
-      return;
-    }
-
-    try {
-      console.log('🗑️ Deleting portfolio image:', imageUrl);
-      const response = await deletePortfolioImage(imageUrl);
-      
-      console.log('✅ Portfolio image deleted:', response);
-      
-      // Update profile data with new portfolio images
-      setProfileData(prev => ({
-        ...prev,
-        portfolioImages: response.portfolioImages
-      }));
-      
-    } catch (err) {
-      console.error('❌ Failed to delete portfolio image:', err);
-      alert(err.message || 'Failed to delete portfolio image');
-    }
-  };
-
-  // Open password change modal
-  const handleOpenPasswordModal = () => {
-    setPasswordData({
-      oldPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
-    setIsPasswordModalOpen(true);
-    setPasswordError(null);
-    setPasswordSuccess(null);
-  };
-
-  // Close password change modal
-  const handleClosePasswordModal = () => {
-    setIsPasswordModalOpen(false);
-    setPasswordError(null);
-    setPasswordSuccess(null);
-    setPasswordData({
-      oldPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
-  };
-
-  // Handle password input changes
-  const handlePasswordInputChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Handle password change submission
-  const handleSubmitPasswordChange = async (e) => {
-    e.preventDefault();
-    
-    // Validate passwords
-    if (!passwordData.oldPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      setPasswordError('All fields are required');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters');
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordError('New passwords do not match');
-      return;
-    }
-
-    try {
-      setPasswordLoading(true);
-      setPasswordError(null);
-      setPasswordSuccess(null);
-      
-      await changeArtisanPassword({
-        oldPassword: passwordData.oldPassword,
-        newPassword: passwordData.newPassword
-      });
-      
-      setPasswordSuccess('Password changed successfully!');
-      
-      // Close modal after 2 seconds
-      setTimeout(() => {
-        handleClosePasswordModal();
-      }, 2000);
-    } catch (err) {
-      console.error('❌ Failed to change password:', err);
-      setPasswordError(err.message || 'Failed to change password');
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
+  if (!profileData) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
+        color: 'white',
+        padding: '20px'
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+        <h2>Failed to Load Profile</h2>
+        <p style={{ marginBottom: '20px' }}>Please make sure you are logged in as an artisan.</p>
+        <button 
+          onClick={() => navigate('/login')}
+          style={{
+            padding: '12px 24px',
+            background: 'white',
+            color: '#2c3e50',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer'
+          }}
+        >
+          Go to Login
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="craftsman-profile-page">
-      <div className="container">
-        {/* Header Section */}
-        <div className="profile-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <button onClick={() => navigate('/craftsman-dashboard')} className="btn-back">
-              ← Back to Dashboard
-            </button>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={handleOpenPasswordModal} className="btn-change-password" style={{ background: '#e74c3c' }}>
-                🔒 Change Password
+    <div className="artisan-profile-modern">
+      <div className="artisan-container">
+        {/* Back Button */}
+        <button onClick={() => navigate('/craftsman-dashboard')} className="artisan-back-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Back to Dashboard
+        </button>
+
+        {/* Success Toast */}
+        {successBanner && (
+          <div className="artisan-success-toast">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span>Changes saved successfully!</span>
+          </div>
+        )}
+
+        {/* Hero Card */}
+        <div className="artisan-hero-card">
+          <div className="artisan-hero-bg">
+            <div className="artisan-decoration-circle"></div>
+          </div>
+
+          {/* Profile Section */}
+          <div className="artisan-profile-section">
+            {/* Avatar */}
+            <div className="artisan-avatar-wrapper">
+              {profileData.profilePicture ? (
+                <img
+                  src={profileData.profilePicture.startsWith('http') 
+                    ? profileData.profilePicture 
+                    : `http://localhost:5000${profileData.profilePicture}`}
+                  alt={profileData.name}
+                  className="artisan-avatar-img"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=2c3e50&color=fff&size=160`;
+                  }}
+                />
+              ) : (
+                <div className="artisan-avatar-placeholder">
+                  <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </div>
+              )}
+              
+              {profileData.available && (
+                <div className="artisan-status-badge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="10"></circle>
+                  </svg>
+                  Available
+                </div>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="artisan-info">
+              <h1 className="artisan-name">{profileData.name}</h1>
+              
+              <div className="artisan-craft-badge">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                {profileData.craftType}
+              </div>
+              
+              <div className="artisan-location">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                {profileData.location}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="artisan-actions">
+              <button onClick={() => setIsEditModalOpen(true)} className="artisan-action-btn primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit Profile
               </button>
-              <button onClick={handleOpenEditModal} className="btn-edit-profile">
-                ✏️ Edit Profile
+              
+              <button onClick={() => setIsPasswordModalOpen(true)} className="artisan-action-btn secondary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Change Password
               </button>
             </div>
           </div>
-          
-          {/* Success Message */}
-          {successMessage && (
-            <div className="success-banner">
-              ✅ {successMessage}
-            </div>
-          )}
-          
-          <div className="profile-hero">
-            <div className="profile-image-container">
-              <img 
-                key={imageRefreshKey}
-                src={
-                  (profileData.avatar || profileData.profilePicture)
-                    ? ((profileData.avatar || profileData.profilePicture).startsWith('http') 
-                        ? `${profileData.avatar || profileData.profilePicture}?t=${imageRefreshKey}`
-                        : `http://localhost:5000${profileData.avatar || profileData.profilePicture}?t=${imageRefreshKey}`)
-                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=3498db&color=fff&size=200`
-                }
-                alt={profileData.name}
-                className="profile-image"
-                onError={(e) => {
-                  console.error('❌ Failed to load profile picture:', e.target.src);
-                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=3498db&color=fff&size=200`;
-                }}
-              />
-              <span className="availability-badge">Active</span>
+
+          {/* Stats Grid */}
+          <div className="artisan-stats-grid">
+            <div className="artisan-stat-card">
+              <div className="stat-icon rating">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+              </div>
+              <div className="stat-content">
+                <div className="stat-label">Rating</div>
+                <div className="stat-value">{profileData.averageRating ? profileData.averageRating.toFixed(1) : '0.0'}</div>
+              </div>
             </div>
 
-            <div className="profile-info">
-              <h1>{profileData.name}</h1>
-              <p className="profession">{profileData.craftType}</p>
-              <p className="location">📍 {profileData.location}</p>
-              
-              <div className="profile-stats">
-                <div className="stat">
-                  <span className="stat-icon">⭐</span>
-                  <div>
-                    <strong>{profileData.averageRating ? profileData.averageRating.toFixed(1) : '0.0'}</strong>
-                    <small>Rating</small>
-                  </div>
-                </div>
-                <div className="stat">
-                  <span className="stat-icon">📷</span>
-                  <div>
-                    <strong>{profileData.portfolioImages?.length || 0}</strong>
-                    <small>Portfolio</small>
-                  </div>
-                </div>
-                <div className="stat">
-                  <span className="stat-icon">📅</span>
-                  <div>
-                    <strong>{formatDate(profileData.createdAt)}</strong>
-                    <small>Member Since</small>
-                  </div>
-                </div>
+            <div className="artisan-stat-card">
+              <div className="stat-icon portfolio">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+              <div className="stat-content">
+                <div className="stat-label">Portfolio</div>
+                <div className="stat-value">{profileData.portfolioImages?.length || 0}</div>
+              </div>
+            </div>
+
+            <div className="artisan-stat-card">
+              <div className="stat-icon reviews">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <div className="stat-content">
+                <div className="stat-label">Reviews</div>
+                <div className="stat-value">{reviews.length}</div>
+              </div>
+            </div>
+
+            <div className="artisan-stat-card">
+              <div className="stat-icon joined">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </div>
+              <div className="stat-content">
+                <div className="stat-label">Joined</div>
+                <div className="stat-value-small">{formatDate(profileData.createdAt)}</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* About Section */}
-        <div className="profile-section">
-          <h2>📖 About Me</h2>
-          <p className="bio">
-            {profileData.description || 'No description provided yet.'}
-          </p>
-        </div>
+        {profileData.description && (
+          <div className="artisan-section-card">
+            <div className="artisan-section-header">
+              <div className="header-left">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <h2>About Me</h2>
+              </div>
+            </div>
+            <p className="artisan-description">{profileData.description}</p>
+          </div>
+        )}
 
         {/* Contact Section */}
-        <div className="profile-section">
-          <h2>📞 Contact Information</h2>
-          <div className="contact-info">
-            <div className="contact-item">
-              <strong>📧 Email:</strong>
-              <span>{profileData.email}</span>
+        <div className="artisan-section-card">
+          <div className="artisan-section-header">
+            <div className="header-left">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+              <h2>Contact Information</h2>
             </div>
+          </div>
+          
+          <div className="artisan-contact-grid">
             <div className="contact-item">
-              <strong>📱 Phone:</strong>
-              <span>{profileData.phone || 'Not provided'}</span>
+              <div className="contact-icon email">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+              </div>
+              <div className="contact-details">
+                <div className="contact-label">Email</div>
+                <div className="contact-value">{profileData.email}</div>
+              </div>
             </div>
+
             <div className="contact-item">
-              <strong>📍 Location:</strong>
-              <span>{profileData.location}</span>
+              <div className="contact-icon phone">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+              </div>
+              <div className="contact-details">
+                <div className="contact-label">Phone</div>
+                <div className="contact-value">{profileData.phone}</div>
+              </div>
             </div>
+
             <div className="contact-item">
-              <strong>🔨 Craft Type:</strong>
-              <span>{profileData.craftType}</span>
+              <div className="contact-icon location">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+              </div>
+              <div className="contact-details">
+                <div className="contact-label">Location</div>
+                <div className="contact-value">{profileData.location}</div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Portfolio Section */}
-        <div className="profile-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2>🎨 Portfolio</h2>
-            <button 
-              onClick={handleOpenPortfolioModal}
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#27ae60',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '0.9rem'
-              }}
-            >
-              + Add Image
+        <div className="artisan-section-card">
+          <div className="artisan-section-header">
+            <div className="header-left">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+              <h2>My Portfolio ({profileData.portfolioImages?.length || 0})</h2>
+            </div>
+            <button onClick={() => setIsPortfolioModalOpen(true)} className="artisan-add-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Add Work
             </button>
           </div>
+
           {profileData.portfolioImages && profileData.portfolioImages.length > 0 ? (
-            <div className="portfolio-grid">
+            <div className="artisan-portfolio-grid">
               {profileData.portfolioImages.map((item, index) => {
-                // Handle both old format (just URL string) and new format (object with imageUrl, price, description)
                 const imageUrl = typeof item === 'string' ? item : item.imageUrl;
                 const price = typeof item === 'object' ? item.price : null;
                 const description = typeof item === 'object' ? item.description : null;
-                const itemId = typeof item === 'object' ? item._id : null;
-                
+
                 return (
-                  <div key={itemId || index} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <div className="portfolio-item">
-                      <div className="portfolio-image" style={{ position: 'relative' }}>
-                        <img 
-                          src={
-                            imageUrl.startsWith('http') 
-                              ? imageUrl 
-                              : `http://localhost:5000${imageUrl}`
-                          }
-                          alt={description || `Portfolio ${index + 1}`}
-                          onError={(e) => {
-                            console.error('❌ Failed to load portfolio image:', e.target.src);
-                            e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
-                          }}
-                        />
+                  <div key={index} className="portfolio-card">
+                    <div className="portfolio-image-wrapper">
+                      <img
+                        src={imageUrl.startsWith('http') ? imageUrl : `http://localhost:5000${imageUrl}`}
+                        alt={description || `Portfolio ${index + 1}`}
+                        className="portfolio-img"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                        }}
+                      />
                       <button
                         onClick={() => handleDeletePortfolioImage(imageUrl)}
-                        style={{
-                          position: 'absolute',
-                          top: '0.5rem',
-                          right: '0.5rem',
-                          background: '#e74c3c',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '32px',
-                          height: '32px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '1.2rem',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                          transition: 'all 0.3s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.background = '#c0392b';
-                          e.target.style.transform = 'scale(1.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.background = '#e74c3c';
-                          e.target.style.transform = 'scale(1)';
-                        }}
+                        className="portfolio-delete-btn"
                         title="Delete image"
                       >
-                        🗑️
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
                       </button>
                     </div>
-                    
-                    {/* Display price and description if available */}
-                    {(price || description) && (
-                      <div style={{ padding: '0.75rem', background: 'white', borderRadius: '8px', border: '1px solid #e1e8ed' }}>
-                        {price && (
-                          <div style={{ marginBottom: '0.5rem' }}>
-                            <strong style={{ color: '#27ae60', fontSize: '1.2rem' }}>
-                              ${price}
-                            </strong>
+
+                    <div className="portfolio-details">
+                      {price && (
+                        <div className="portfolio-price">${price}</div>
+                      )}
+                      {description && (
+                        <p className="portfolio-description">{description}</p>
+                      )}
+
+                      {portfolioComments[index] && portfolioComments[index].length > 0 && (
+                        <div className="portfolio-comments-section">
+                          <div className="comments-header">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            Customer Comments ({portfolioComments[index].length})
                           </div>
-                        )}
-                        {description && (
-                          <p style={{ margin: 0, color: '#2c3e50', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                            {description}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Display customer comments */}
-                  {portfolioComments[index] && portfolioComments[index].length > 0 && (
-                    <div style={{ padding: '0.75rem', background: '#f8f9fa', borderRadius: '8px' }}>
-                      <h4 style={{ fontSize: '0.95rem', marginBottom: '0.75rem', color: '#2c3e50' }}>
-                        💬 Customer Comments ({portfolioComments[index].length})
-                      </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        {portfolioComments[index].map((comment) => (
-                          <div 
-                            key={comment._id} 
-                            style={{
-                              padding: '0.75rem',
-                              background: 'white',
-                              border: '1px solid #e1e8ed',
-                              borderRadius: '8px'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                              <img 
-                                src={
-                                  comment.customer.profilePicture?.startsWith('http') 
-                                    ? comment.customer.profilePicture
-                                    : `http://localhost:5000${comment.customer.profilePicture}`
-                                }
-                                alt={comment.customer.name}
-                                style={{
-                                  width: '32px',
-                                  height: '32px',
-                                  borderRadius: '50%',
-                                  objectFit: 'cover'
-                                }}
-                                onError={(e) => {
-                                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.customer.name)}&background=3498db&color=fff&size=32`;
-                                }}
-                              />
-                              <div style={{ flex: 1 }}>
-                                <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem', color: '#2c3e50' }}>
-                                  {comment.customer.name}
-                                </p>
-                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#7f8c8d' }}>
-                                  {new Date(comment.createdAt).toLocaleDateString('en-US', { 
-                                    month: 'short', 
-                                    day: 'numeric', 
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </p>
+                          {portfolioComments[index].map((comment) => (
+                            <div key={comment._id} className="comment-item">
+                              <div className="comment-avatar">
+                                {comment.customer.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="comment-content">
+                                <div className="comment-header">
+                                  <span className="comment-author">{comment.customer.name}</span>
+                                  <span className="comment-date">
+                                    {new Date(comment.createdAt).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                                <p className="comment-text">{comment.comment}</p>
                               </div>
                             </div>
-                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#34495e', lineHeight: '1.5' }}>
-                              {comment.comment}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
+                  </div>
+                );
               })}
             </div>
           ) : (
-            <div className="empty-state">
-              <div className="empty-icon">🖼️</div>
-              <h3>No portfolio items yet</h3>
-              <p>Add some work samples to showcase your skills!</p>
-            </div>
+            <div className="no-comments">No portfolio items yet. Add some work samples to showcase your skills!</div>
           )}
         </div>
 
         {/* Reviews Section */}
-        <div className="profile-section">
-          <h2>⭐ Customer Reviews ({reviews.length})</h2>
-          {reviewsLoading ? (
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <p>Loading reviews...</p>
-            </div>
-          ) : reviews.length > 0 ? (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {(showAllReviews ? reviews : reviews.slice(-1)).map((review) => (
-                  <div 
-                    key={review._id} 
-                    style={{
-                      background: '#f8f9fa',
-                      padding: '1.5rem',
-                      borderRadius: '12px',
-                      border: '1px solid #dee2e6'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                          <strong style={{ fontSize: '1.1rem', color: '#2c3e50' }}>
-                            {review.customer?.name || 'Customer'}
-                          </strong>
-                          {renderStars(review.stars_number)}
-                        </div>
-                        <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: 0 }}>
-                          {formatReviewDate(review.review_date)}
-                        </p>
-                      </div>
-                    </div>
-                    <p style={{ 
-                      color: '#2c3e50', 
-                      lineHeight: '1.6', 
-                      margin: 0,
-                      fontSize: '1rem'
-                    }}>
-                      {review.comment}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              {reviews.length > 1 && (
-                <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                  <button 
-                    onClick={() => setShowAllReviews(!showAllReviews)}
-                    style={{
-                      padding: '0.75rem 2rem',
-                      background: '#3498db',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      transition: 'background 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = '#2980b9'}
-                    onMouseLeave={(e) => e.target.style.background = '#3498db'}
-                  >
-                    {showAllReviews ? '← Show Less' : `Show More (${reviews.length - 1} more reviews) →`}
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="empty-state">
-              <div className="empty-icon">💬</div>
-              <h3>No reviews yet</h3>
-              <p>You haven't received any customer reviews yet.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Profile Details */}
-        <div className="profile-section">
-          <h2>ℹ️ Profile Details</h2>
-          <div className="profile-details-grid">
-            <div className="detail-card">
-              <strong>Profile ID</strong>
-              <span className="detail-value">{profileData._id}</span>
-            </div>
-            <div className="detail-card">
-              <strong>Created At</strong>
-              <span className="detail-value">{formatDate(profileData.createdAt)}</span>
-            </div>
-            <div className="detail-card">
-              <strong>Last Updated</strong>
-              <span className="detail-value">{formatDate(profileData.updatedAt)}</span>
-            </div>
-            <div className="detail-card">
-              <strong>Average Rating</strong>
-              <span className="detail-value">⭐ {profileData.averageRating ? profileData.averageRating.toFixed(1) : '0.0'}</span>
+        <div className="artisan-section-card">
+          <div className="artisan-section-header">
+            <div className="header-left">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              <h2>Customer Reviews ({reviews.length})</h2>
             </div>
           </div>
+
+          {reviewsLoading ? (
+            <div className="no-comments">Loading reviews...</div>
+          ) : reviews.length > 0 ? (
+            <div className="artisan-reviews-list">
+              {(showAllReviews ? reviews : reviews.slice(-1)).map((review) => (
+                <div key={review._id} className="review-card">
+                  <div className="review-header">
+                    <div className="review-author-section">
+                      <div className="review-avatar">
+                        {review.customer?.name?.charAt(0).toUpperCase() || 'C'}
+                      </div>
+                      <div className="review-author-info">
+                        <div className="review-author-name">{review.customer?.name || 'Customer'}</div>
+                        <div className="review-date">{formatReviewDate(review.review_date)}</div>
+                      </div>
+                    </div>
+                    <div className="review-rating">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                      </svg>
+                      {review.stars_number}
+                    </div>
+                  </div>
+                  <p className="review-comment">{review.comment}</p>
+                </div>
+              ))}
+
+              {reviews.length > 1 && (
+                <button
+                  onClick={() => setShowAllReviews(!showAllReviews)}
+                  className="reviews-show-more"
+                >
+                  {showAllReviews ? 'Show Less' : `Show All ${reviews.length} Reviews`}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="no-reviews">No reviews yet. You'll see customer feedback here.</div>
+          )}
         </div>
       </div>
 
       {/* Edit Profile Modal */}
       {isEditModalOpen && (
-        <div className="modal-overlay" onClick={handleCloseEditModal}>
-          <div className="modal-content edit-profile-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>✏️ Edit Profile</h2>
-              <button onClick={handleCloseEditModal} className="btn-close-modal">
-                ✕
+        <div className="artisan-modal-overlay" onClick={() => setIsEditModalOpen(false)}>
+          <div className="artisan-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="artisan-modal-header">
+              <div className="modal-header-content">
+                <div className="modal-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </div>
+                <h2>Edit Profile</h2>
+              </div>
+              <button onClick={() => setIsEditModalOpen(false)} className="modal-close-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
-            
-            <form onSubmit={handleSubmitEdit} className="edit-profile-form">
-              {editError && (
-                <div className="error-message">
-                  ❌ {editError}
-                </div>
-              )}
-              
-              {successMessage && (
-                <div className="success-message">
-                  ✅ {successMessage}
-                </div>
-              )}
-              
-              <div className="form-group">
-                <label htmlFor="profilePicture">Profile Picture</label>
-                <input
-                  type="file"
-                  id="profilePicture"
-                  accept="image/*"
-                  onChange={handleProfilePictureChange}
-                />
-                {profilePicturePreview && (
-                  <div style={{ marginTop: '1rem' }}>
-                    <img 
-                      src={profilePicturePreview} 
-                      alt="Preview" 
-                      style={{ 
-                        width: '150px', 
-                        height: '150px', 
-                        objectFit: 'cover', 
-                        borderRadius: '50%',
-                        border: '3px solid #667eea'
-                      }} 
-                    />
+
+            <form onSubmit={handleSubmitEdit}>
+              <div className="artisan-modal-body">
+                {editError && (
+                  <div style={{
+                    padding: '12px 16px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    borderRadius: '12px',
+                    marginBottom: '20px',
+                    fontWeight: 600
+                  }}>
+                    {editError}
                   </div>
                 )}
-                <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '0.5rem', display: 'block' }}>
-                  Upload an image file (max 5MB)
-                </small>
+
+                {successMessage && (
+                  <div style={{
+                    padding: '12px 16px',
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    color: '#10b981',
+                    borderRadius: '12px',
+                    marginBottom: '20px',
+                    fontWeight: 600
+                  }}>
+                    {successMessage}
+                  </div>
+                )}
+
+                <div className="artisan-form-group">
+                  <label htmlFor="profilePicture">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                      <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    Profile Picture
+                  </label>
+                  <input
+                    type="file"
+                    id="profilePicture"
+                    accept="image/*"
+                    onChange={handleProfilePictureChange}
+                    className="artisan-form-file-input"
+                  />
+                  <label htmlFor="profilePicture" className="artisan-file-label">
+                    <div className="file-icon">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                    </div>
+                    <div className="file-text">
+                      <strong>Click to upload</strong> or drag and drop
+                    </div>
+                  </label>
+                  {profilePicturePreview && (
+                    <div className="image-preview">
+                      <img src={profilePicturePreview} alt="Preview" className="preview-img" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfilePicture(null);
+                          setProfilePicturePreview(null);
+                        }}
+                        className="remove-preview-btn"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="artisan-form-group">
+                  <label htmlFor="name">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="artisan-form-input"
+                    required
+                  />
+                </div>
+
+                <div className="artisan-form-group">
+                  <label htmlFor="phone">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="artisan-form-input"
+                    required
+                  />
+                </div>
+
+                <div className="artisan-form-group">
+                  <label htmlFor="location">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    className="artisan-form-input"
+                    required
+                  />
+                </div>
+
+                <div className="artisan-form-group">
+                  <label htmlFor="craftType">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    Craft Type
+                  </label>
+                  <input
+                    type="text"
+                    id="craftType"
+                    name="craftType"
+                    value={formData.craftType}
+                    onChange={handleInputChange}
+                    className="artisan-form-input"
+                    required
+                  />
+                </div>
+
+                <div className="artisan-form-group">
+                  <label htmlFor="description">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="16" y1="13" x2="8" y2="13"></line>
+                      <line x1="16" y1="17" x2="8" y2="17"></line>
+                      <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    Description
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    className="artisan-form-textarea"
+                    rows="4"
+                  ></textarea>
+                </div>
               </div>
-              
-              <div className="form-group">
-                <label htmlFor="name">Name *</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Your full name"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="phone">Phone Number *</label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Your phone number"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="location">Location *</label>
-                <input
-                  type="text"
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Your city or location"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="craftType">Craft Type *</label>
-                <input
-                  type="text"
-                  id="craftType"
-                  name="craftType"
-                  value={formData.craftType}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="e.g., Electrician, Plumber, Carpenter"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="description">Description</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows="4"
-                  placeholder="Tell customers about your skills and experience"
-                ></textarea>
-              </div>
-              
-              <div className="modal-actions">
+
+              <div className="artisan-modal-footer">
                 <button
                   type="button"
-                  onClick={handleCloseEditModal}
-                  className="btn-cancel"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="artisan-modal-btn cancel"
                   disabled={editLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn-save"
+                  className="artisan-modal-btn submit"
                   disabled={editLoading}
                 >
                   {editLoading ? 'Saving...' : 'Save Changes'}
@@ -1068,58 +973,98 @@ const ArtisanProfilePage = () => {
 
       {/* Portfolio Upload Modal */}
       {isPortfolioModalOpen && (
-        <div className="modal-overlay" onClick={handleClosePortfolioModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <div className="modal-header">
-              <h2>🎨 Add Portfolio Image</h2>
-              <button onClick={handleClosePortfolioModal} className="btn-close-modal">
-                ✕
+        <div className="artisan-modal-overlay" onClick={() => setIsPortfolioModalOpen(false)}>
+          <div className="artisan-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="artisan-modal-header">
+              <div className="modal-header-content">
+                <div className="modal-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                </div>
+                <h2>Add Portfolio Image</h2>
+              </div>
+              <button onClick={() => setIsPortfolioModalOpen(false)} className="modal-close-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
-            
-            <div style={{ padding: '1.5rem' }}>
+
+            <div className="artisan-modal-body">
               {portfolioError && (
-                <div className="error-message" style={{ marginBottom: '1rem' }}>
-                  ❌ {portfolioError}
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  borderRadius: '12px',
+                  marginBottom: '20px',
+                  fontWeight: 600
+                }}>
+                  {portfolioError}
                 </div>
               )}
-              
+
               {portfolioSuccess && (
-                <div className="success-message" style={{ marginBottom: '1rem' }}>
-                  ✅ {portfolioSuccess}
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: '#10b981',
+                  borderRadius: '12px',
+                  marginBottom: '20px',
+                  fontWeight: 600
+                }}>
+                  {portfolioSuccess}
                 </div>
               )}
-              
-              <div className="form-group">
-                <label htmlFor="portfolioImage">Select Image *</label>
+
+              <div className="artisan-form-group">
+                <label htmlFor="portfolioImage">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  Select Image
+                </label>
                 <input
                   type="file"
                   id="portfolioImage"
                   accept="image/*"
                   onChange={handlePortfolioFileChange}
+                  className="artisan-form-file-input"
                   disabled={portfolioLoading}
                 />
+                <label htmlFor="portfolioImage" className="artisan-file-label">
+                  <div className="file-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                  </div>
+                  <div className="file-text">
+                    <strong>Click to upload</strong> portfolio image
+                  </div>
+                </label>
                 {portfolioPreview && (
-                  <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                    <img 
-                      src={portfolioPreview} 
-                      alt="Preview" 
-                      style={{ 
-                        maxWidth: '100%',
-                        maxHeight: '300px',
-                        borderRadius: '8px',
-                        border: '2px solid #667eea'
-                      }} 
-                    />
+                  <div className="image-preview">
+                    <img src={portfolioPreview} alt="Preview" className="preview-img" />
                   </div>
                 )}
-                <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '0.5rem', display: 'block' }}>
-                  Upload an image file (max 5MB)
-                </small>
               </div>
-              
-              <div className="form-group">
-                <label htmlFor="portfolioPrice">Price ($) *</label>
+
+              <div className="artisan-form-group">
+                <label htmlFor="portfolioPrice">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                  Price ($)
+                </label>
                 <input
                   type="number"
                   id="portfolioPrice"
@@ -1127,60 +1072,51 @@ const ArtisanProfilePage = () => {
                   step="0.01"
                   value={portfolioPrice}
                   onChange={(e) => setPortfolioPrice(e.target.value)}
+                  className="artisan-form-input"
                   placeholder="Enter price"
                   disabled={portfolioLoading}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '1rem'
-                  }}
                 />
               </div>
-              
-              <div className="form-group">
-                <label htmlFor="portfolioDescription">Description *</label>
+
+              <div className="artisan-form-group">
+                <label htmlFor="portfolioDescription">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                  </svg>
+                  Description
+                </label>
                 <textarea
                   id="portfolioDescription"
                   value={portfolioDescription}
                   onChange={(e) => setPortfolioDescription(e.target.value)}
+                  className="artisan-form-textarea"
                   placeholder="Describe your work..."
-                  rows="3"
+                  rows="4"
                   disabled={portfolioLoading}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    resize: 'vertical'
-                  }}
                 ></textarea>
               </div>
-              
-              <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
-                <button
-                  type="button"
-                  onClick={handleClosePortfolioModal}
-                  className="btn-cancel"
-                  disabled={portfolioLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePortfolioUpload}
-                  className="btn-save"
-                  disabled={portfolioLoading || !portfolioFile || !portfolioPrice || !portfolioDescription}
-                  style={{
-                    opacity: (!portfolioFile || portfolioLoading || !portfolioPrice || !portfolioDescription) ? 0.6 : 1,
-                    cursor: (!portfolioFile || portfolioLoading || !portfolioPrice || !portfolioDescription) ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {portfolioLoading ? 'Uploading...' : 'Upload'}
-                </button>
-              </div>
+            </div>
+
+            <div className="artisan-modal-footer">
+              <button
+                type="button"
+                onClick={() => setIsPortfolioModalOpen(false)}
+                className="artisan-modal-btn cancel"
+                disabled={portfolioLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePortfolioUpload}
+                className="artisan-modal-btn submit"
+                disabled={portfolioLoading || !portfolioFile || !portfolioPrice || !portfolioDescription}
+              >
+                {portfolioLoading ? 'Uploading...' : 'Upload'}
+              </button>
             </div>
           </div>
         </div>
@@ -1188,120 +1124,135 @@ const ArtisanProfilePage = () => {
 
       {/* Change Password Modal */}
       {isPasswordModalOpen && (
-        <div className="modal-overlay" onClick={handleClosePasswordModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <div className="modal-header">
-              <h2>🔒 Change Password</h2>
-              <button onClick={handleClosePasswordModal} className="btn-close-modal">
-                ✕
+        <div className="artisan-modal-overlay" onClick={() => setIsPasswordModalOpen(false)}>
+          <div className="artisan-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="artisan-modal-header">
+              <div className="modal-header-content">
+                <div className="modal-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                <h2>Change Password</h2>
+              </div>
+              <button onClick={() => setIsPasswordModalOpen(false)} className="modal-close-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
-            
-            <div style={{ padding: '1.5rem' }}>
-              <form onSubmit={handleSubmitPasswordChange}>
+
+            <form onSubmit={handleSubmitPasswordChange}>
+              <div className="artisan-modal-body">
                 {passwordError && (
-                  <div className="error-message" style={{ marginBottom: '1rem' }}>
-                    ❌ {passwordError}
+                  <div style={{
+                    padding: '12px 16px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    borderRadius: '12px',
+                    marginBottom: '20px',
+                    fontWeight: 600
+                  }}>
+                    {passwordError}
                   </div>
                 )}
-                
+
                 {passwordSuccess && (
-                  <div className="success-message" style={{ marginBottom: '1rem' }}>
-                    ✅ {passwordSuccess}
+                  <div style={{
+                    padding: '12px 16px',
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    color: '#10b981',
+                    borderRadius: '12px',
+                    marginBottom: '20px',
+                    fontWeight: 600
+                  }}>
+                    {passwordSuccess}
                   </div>
                 )}
-                
-                <div className="form-group">
-                  <label htmlFor="oldPassword">Current Password *</label>
+
+                <div className="artisan-form-group">
+                  <label htmlFor="oldPassword">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    Current Password
+                  </label>
                   <input
                     type="password"
                     id="oldPassword"
                     name="oldPassword"
                     value={passwordData.oldPassword}
                     onChange={handlePasswordInputChange}
+                    className="artisan-form-input"
                     required
-                    placeholder="Enter current password"
                     disabled={passwordLoading}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #ddd',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      boxSizing: 'border-box'
-                    }}
                   />
                 </div>
-                
-                <div className="form-group">
-                  <label htmlFor="newPassword">New Password *</label>
+
+                <div className="artisan-form-group">
+                  <label htmlFor="newPassword">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    New Password
+                  </label>
                   <input
                     type="password"
                     id="newPassword"
                     name="newPassword"
                     value={passwordData.newPassword}
                     onChange={handlePasswordInputChange}
+                    className="artisan-form-input"
                     required
-                    placeholder="Enter new password (min 6 characters)"
                     minLength="6"
                     disabled={passwordLoading}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #ddd',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      boxSizing: 'border-box'
-                    }}
                   />
                 </div>
-                
-                <div className="form-group">
-                  <label htmlFor="confirmPassword">Confirm New Password *</label>
+
+                <div className="artisan-form-group">
+                  <label htmlFor="confirmPassword">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    Confirm New Password
+                  </label>
                   <input
                     type="password"
                     id="confirmPassword"
                     name="confirmPassword"
                     value={passwordData.confirmPassword}
                     onChange={handlePasswordInputChange}
+                    className="artisan-form-input"
                     required
-                    placeholder="Confirm new password"
                     disabled={passwordLoading}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #ddd',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      boxSizing: 'border-box'
-                    }}
                   />
                 </div>
-                
-                <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={handleClosePasswordModal}
-                    className="btn-cancel"
-                    disabled={passwordLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-save"
-                    disabled={passwordLoading}
-                    style={{
-                      background: '#e74c3c',
-                      opacity: passwordLoading ? 0.6 : 1,
-                      cursor: passwordLoading ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {passwordLoading ? 'Changing...' : 'Change Password'}
-                  </button>
-                </div>
-              </form>
-            </div>
+              </div>
+
+              <div className="artisan-modal-footer">
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="artisan-modal-btn cancel"
+                  disabled={passwordLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="artisan-modal-btn submit"
+                  disabled={passwordLoading}
+                  style={{ background: passwordLoading ? '#94a3b8' : 'linear-gradient(135deg, #ef4444, #dc2626)' }}
+                >
+                  {passwordLoading ? 'Changing...' : 'Change Password'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

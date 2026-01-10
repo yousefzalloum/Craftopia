@@ -491,3 +491,59 @@ export const changeArtisanPassword = async (passwordData) => {
     throw new Error(parseApiError(error));
   }
 };
+
+/**
+ * Get artisan reviews
+ * @returns {Promise<Array>} Array of reviews
+ */
+export const getArtisanReviews = async () => {
+  try {
+    console.log('📝 Fetching artisan reviews...');
+    const response = await get('/artisans/reviews');
+    console.log('✅ Reviews fetched successfully');
+    return response || [];
+  } catch (error) {
+    console.error('❌ Failed to fetch artisan reviews:', error);
+    return [];
+  }
+};
+
+/**
+ * Get portfolio image comments
+ * @param {number} imageIndex - Index of the portfolio image
+ * @returns {Promise<Array>} Array of comments
+ */
+export const getPortfolioComments = async (imageIndex) => {
+  try {
+    console.log(`💬 Fetching comments for portfolio image ${imageIndex}...`);
+    const response = await get(`/artisans/portfolio/${imageIndex}/comments`);
+    console.log('✅ Comments fetched successfully');
+    return response || [];
+  } catch (error) {
+    console.error(`❌ Failed to fetch comments for image ${imageIndex}:`, error);
+    return [];
+  }
+};
+
+// Default export
+const craftsmanService = {
+  registerCraftsman,
+  loginCraftsman,
+  getArtisanProfile,
+  updateArtisanProfile,
+  uploadProfilePicture,
+  uploadPortfolioImage,
+  deletePortfolioImage,
+  getCraftsmanProfile,
+  updateCraftsmanProfile,
+  getAllCraftsmen,
+  setAvailability,
+  getArtisanAvailability,
+  getAllArtisans,
+  logoutCraftsman,
+  changeArtisanPassword,
+  getArtisanReviews,
+  getPortfolioComments
+};
+
+export default craftsmanService;
