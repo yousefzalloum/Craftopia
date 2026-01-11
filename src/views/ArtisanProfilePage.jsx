@@ -39,13 +39,20 @@ const ArtisanProfilePage = () => {
   const [successMessage, setSuccessMessage] = useState('');
   
   // Portfolio states
-  const [portfolioFile, setPortfolioFile] = useState(null);
-  const [portfolioPreview, setPortfolioPreview] = useState(null);
+  const [portfolioFiles, setPortfolioFiles] = useState([]);
+  const [portfolioPreviews, setPortfolioPreviews] = useState([]);
+  const [portfolioTitle, setPortfolioTitle] = useState('');
   const [portfolioPrice, setPortfolioPrice] = useState('');
   const [portfolioDescription, setPortfolioDescription] = useState('');
+  const [portfolioIsForSale, setPortfolioIsForSale] = useState(true);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [portfolioError, setPortfolioError] = useState('');
   const [portfolioSuccess, setPortfolioSuccess] = useState('');
+  
+  // Gallery modal states
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   
   // Password states
   const [passwordData, setPasswordData] = useState({
@@ -61,9 +68,21 @@ const ArtisanProfilePage = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        console.log('🔍 Fetching artisan profile...');
         const data = await craftsmanService.getArtisanProfile();
-        console.log('✅ Profile data received:', data);
+        
+        // Try to fetch portfolio projects separately if the endpoint exists
+        try {
+          const projects = await craftsmanService.getArtisanProjects();
+          console.log('📦 Fetched projects:', projects);
+          data.portfolio = projects;
+        } catch (projectError) {
+          console.warn('⚠️ Could not fetch projects separately, using profile data');
+          // If projects endpoint doesn't exist, use portfolio from profile if available
+          if (!data.portfolio) {
+            data.portfolio = [];
+          }
+        }
+        
         setProfileData(data);
         setFormData({
           name: data.name || '',
@@ -93,9 +112,7 @@ const ArtisanProfilePage = () => {
       
       try {
         setReviewsLoading(true);
-        console.log('📋 Fetching reviews for artisan:', profileData._id);
         const data = await get(`/reviews/${profileData._id}`);
-        console.log('✅ Reviews fetched:', data);
         
         if (Array.isArray(data)) {
           setReviews(data);
@@ -104,7 +121,6 @@ const ArtisanProfilePage = () => {
             const total = data.reduce((sum, review) => sum + (review.stars_number || 0), 0);
             const average = total / data.length;
             setCalculatedRating(average);
-            console.log('⭐ Calculated average rating:', average.toFixed(1));
           }
         } else if (data && Array.isArray(data.reviews)) {
           setReviews(data.reviews);
@@ -113,7 +129,6 @@ const ArtisanProfilePage = () => {
             const total = data.reviews.reduce((sum, review) => sum + (review.stars_number || 0), 0);
             const average = total / data.reviews.length;
             setCalculatedRating(average);
-            console.log('⭐ Calculated average rating:', average.toFixed(1));
           }
         } else {
           setReviews([]);
@@ -134,14 +149,14 @@ const ArtisanProfilePage = () => {
   // Fetch portfolio comments
   useEffect(() => {
     const fetchAllPortfolioComments = async () => {
-      if (!profileData?.portfolioImages || profileData.portfolioImages.length === 0) return;
+      if (!profileData?.portfolio || profileData.portfolio.length === 0) return;
       
       try {
         console.log('📝 Fetching comments for portfolio images...');
         const commentsData = {};
         
-        for (let i = 0; i < profileData.portfolioImages.length; i++) {
-          const item = profileData.portfolioImages[i];
+        for (let i = 0; i < profileData.portfolio.length; i++) {
+          const item = profileData.portfolio[i];
           const imageUrl = typeof item === 'string' ? item : item.imageUrl;
           
           try {
@@ -191,14 +206,19 @@ const ArtisanProfilePage = () => {
       let updatedData = { ...formData };
 
       if (profilePicture) {
-        const pictureFormData = new FormData();
-        pictureFormData.append('profilePicture', profilePicture);
-        const uploadResponse = await craftsmanService.uploadProfilePicture(pictureFormData);
-        updatedData.profilePicture = uploadResponse.profilePicture;
+        // Pass the file directly, not FormData
+        const uploadResponse = await craftsmanService.uploadProfilePicture(profilePicture);
+        console.log('✅ Avatar uploaded, path:', uploadResponse.avatar);
+        updatedData.profilePicture = uploadResponse.avatar || uploadResponse.profilePicture;
       }
 
       const response = await craftsmanService.updateArtisanProfile(updatedData);
-      setProfileData(response);
+      
+      // Refetch the profile to get the latest data including avatar
+      const refreshedProfile = await craftsmanService.getArtisanProfile();
+      console.log('🔄 Refreshed profile with new avatar:', refreshedProfile.profilePicture);
+      setProfileData(refreshedProfile);
+      
       setSuccessMessage('Profile updated successfully!');
       setSuccessBanner(true);
       
@@ -209,23 +229,35 @@ const ArtisanProfilePage = () => {
         setProfilePicturePreview(null);
       }, 2000);
     } catch (error) {
-      setEditError(error.response?.data?.message || 'Failed to update profile');
+      setEditError(error.response?.data?.message || error.message || 'Failed to update profile');
     } finally {
       setEditLoading(false);
     }
   };
 
   const handlePortfolioFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPortfolioFile(file);
-      setPortfolioPreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    if (files.length > 10) {
+      setPortfolioError('Maximum 10 files allowed');
+      return;
     }
+    
+    setPortfolioFiles(files);
+    
+    // Create previews for all files
+    const previews = files.map(file => ({
+      url: URL.createObjectURL(file),
+      type: file.type.startsWith('video/') ? 'video' : 'image',
+      name: file.name
+    }));
+    setPortfolioPreviews(previews);
   };
 
   const handlePortfolioUpload = async () => {
-    if (!portfolioFile || !portfolioPrice || !portfolioDescription) {
-      setPortfolioError('Please fill all fields');
+    if (!portfolioFiles.length || !portfolioTitle || !portfolioDescription) {
+      setPortfolioError('Please fill title, description and select files');
       return;
     }
 
@@ -235,39 +267,95 @@ const ArtisanProfilePage = () => {
 
     try {
       const formData = new FormData();
-      formData.append('portfolioImage', portfolioFile);
-      formData.append('price', portfolioPrice);
+      formData.append('title', portfolioTitle);
       formData.append('description', portfolioDescription);
+      formData.append('price', portfolioPrice || '0');
+      formData.append('isForSale', portfolioIsForSale.toString());
+      
+      // Append all files
+      portfolioFiles.forEach((file) => {
+        formData.append('files', file);
+      });
 
       const response = await craftsmanService.uploadPortfolioImage(formData);
-      setProfileData(response);
-      setPortfolioSuccess('Portfolio image uploaded successfully!');
+      console.log('📦 Upload response:', response);
+      
+      // Refetch the profile to get updated portfolio
+      const updatedProfile = await craftsmanService.getArtisanProfile();
+      
+      // Try to fetch projects separately if endpoint exists
+      try {
+        const updatedProjects = await craftsmanService.getArtisanProjects();
+        console.log('🔄 Refetched projects:', updatedProjects);
+        updatedProfile.portfolio = updatedProjects;
+      } catch (projectError) {
+        // If no projects endpoint, keep existing or empty array
+        if (!updatedProfile.portfolio) {
+          updatedProfile.portfolio = [];
+        }
+      }
+      
+      setProfileData(updatedProfile);
+      setPortfolioSuccess('Project uploaded successfully!');
       
       setTimeout(() => {
         setIsPortfolioModalOpen(false);
-        setPortfolioFile(null);
-        setPortfolioPreview(null);
+        setPortfolioFiles([]);
+        setPortfolioPreviews([]);
+        setPortfolioTitle('');
         setPortfolioPrice('');
         setPortfolioDescription('');
+        setPortfolioIsForSale(true);
         setPortfolioSuccess('');
       }, 2000);
     } catch (error) {
-      setPortfolioError(error.response?.data?.message || 'Failed to upload image');
+      setPortfolioError(error.response?.data?.message || 'Failed to upload project');
     } finally {
       setPortfolioLoading(false);
     }
   };
 
-  const handleDeletePortfolioImage = async (imageUrl) => {
-    if (!window.confirm('Are you sure you want to delete this portfolio image?')) return;
+  const handleOpenGallery = (project) => {
+    setSelectedProject(project);
+    setCurrentMediaIndex(0);
+    setIsGalleryModalOpen(true);
+  };
+
+  const handleNextMedia = () => {
+    if (selectedProject && selectedProject.media) {
+      setCurrentMediaIndex((prev) => (prev + 1) % selectedProject.media.length);
+    }
+  };
+
+  const handlePrevMedia = () => {
+    if (selectedProject && selectedProject.media) {
+      setCurrentMediaIndex((prev) => (prev - 1 + selectedProject.media.length) % selectedProject.media.length);
+    }
+  };
+
+  const handleDeletePortfolioImage = async (projectId) => {
+    if (!window.confirm('Are you sure you want to delete this project? All images and videos will be removed.')) return;
 
     try {
-      const response = await craftsmanService.deletePortfolioImage({ imageUrl });
-      setProfileData(response);
+      await craftsmanService.deletePortfolioImage(projectId);
+      
+      // Refetch profile to get updated portfolio
+      const updatedProfile = await craftsmanService.getArtisanProfile();
+      
+      // Try to fetch projects separately if endpoint exists
+      try {
+        const updatedProjects = await craftsmanService.getArtisanProjects();
+        updatedProfile.portfolio = updatedProjects;
+      } catch (projectError) {
+        // If no projects endpoint, remove from current state
+        updatedProfile.portfolio = profileData.portfolio.filter(p => p._id !== projectId);
+      }
+      
+      setProfileData(updatedProfile);
       setSuccessBanner(true);
       setTimeout(() => setSuccessBanner(false), 3000);
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to delete image');
+      alert(error.response?.data?.message || 'Failed to delete project');
     }
   };
 
@@ -421,11 +509,14 @@ const ArtisanProfilePage = () => {
           <div className="artisan-profile-section">
             {/* Avatar */}
             <div className="artisan-avatar-wrapper">
-              {profileData.profilePicture ? (
+              {(profileData.avatar || profileData.profilePicture) ? (
                 <img
-                  src={profileData.profilePicture.startsWith('http') 
-                    ? profileData.profilePicture 
-                    : `http://localhost:5000${profileData.profilePicture}`}
+                  src={(() => {
+                    const avatarUrl = profileData.avatar || profileData.profilePicture;
+                    return avatarUrl.startsWith('http') 
+                      ? avatarUrl 
+                      : `http://localhost:5000${avatarUrl}`;
+                  })()}
                   alt={profileData.name}
                   className="artisan-avatar-img"
                   onError={(e) => {
@@ -628,7 +719,7 @@ const ArtisanProfilePage = () => {
                 <rect x="14" y="14" width="7" height="7"></rect>
                 <rect x="3" y="14" width="7" height="7"></rect>
               </svg>
-              <h2>My Portfolio ({profileData.portfolioImages?.length || 0})</h2>
+              <h2>My Portfolio ({profileData.portfolio?.length || 0})</h2>
             </div>
             <button onClick={() => setIsPortfolioModalOpen(true)} className="artisan-add-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -639,29 +730,52 @@ const ArtisanProfilePage = () => {
             </button>
           </div>
 
-          {profileData.portfolioImages && profileData.portfolioImages.length > 0 ? (
+          {profileData.portfolio && profileData.portfolio.length > 0 ? (
             <div className="artisan-portfolio-grid">
-              {profileData.portfolioImages.map((item, index) => {
-                const imageUrl = typeof item === 'string' ? item : item.imageUrl;
-                const price = typeof item === 'object' ? item.price : null;
-                const description = typeof item === 'object' ? item.description : null;
+              {profileData.portfolio.map((project, index) => {
+                const coverImage = project.coverImage || (project.media && project.media[0]?.url);
+                const title = project.title || `Project ${index + 1}`;
+                const price = project.price;
+                const description = project.description;
+                const isForSale = project.isForSale;
+                const projectId = project._id;
 
                 return (
-                  <div key={index} className="portfolio-card">
-                    <div className="portfolio-image-wrapper">
+                  <div key={projectId || index} className="portfolio-card">
+                    <div className="portfolio-image-wrapper" onClick={() => handleOpenGallery(project)} style={{cursor: 'pointer'}}>
                       <img
-                        src={imageUrl.startsWith('http') ? imageUrl : `http://localhost:5000${imageUrl}`}
-                        alt={description || `Portfolio ${index + 1}`}
+                        src={coverImage?.startsWith('http') ? coverImage : `http://localhost:5000${coverImage}`}
+                        alt={title}
                         className="portfolio-img"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                          e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23999" font-family="sans-serif" font-size="18"%3EImage Not Found%3C/text%3E%3C/svg%3E';
                         }}
                       />
+                      {isForSale && (
+                        <div className="for-sale-badge">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                          </svg>
+                          For Sale
+                        </div>
+                      )}
+                      {project.media && project.media.length > 1 && (
+                        <div className="media-count-badge">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                          </svg>
+                          {project.media.length}
+                        </div>
+                      )}
                       <button
-                        onClick={() => handleDeletePortfolioImage(imageUrl)}
+                        onClick={() => handleDeletePortfolioImage(projectId)}
                         className="portfolio-delete-btn"
-                        title="Delete image"
+                        title="Delete project"
                       >
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <polyline points="3 6 5 6 21 6"></polyline>
@@ -671,6 +785,7 @@ const ArtisanProfilePage = () => {
                     </div>
 
                     <div className="portfolio-details">
+                      <h3 className="portfolio-title">{title}</h3>
                       {price && (
                         <div className="portfolio-price">${price}</div>
                       )}
@@ -999,7 +1114,7 @@ const ArtisanProfilePage = () => {
                     <polyline points="21 15 16 10 5 21"></polyline>
                   </svg>
                 </div>
-                <h2>Add Portfolio Image</h2>
+                <h2>Add Portfolio Project</h2>
               </div>
               <button onClick={() => setIsPortfolioModalOpen(false)} className="modal-close-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1037,23 +1152,43 @@ const ArtisanProfilePage = () => {
               )}
 
               <div className="artisan-form-group">
-                <label htmlFor="portfolioImage">
+                <label htmlFor="portfolioTitle">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  </svg>
+                  Project Title
+                </label>
+                <input
+                  type="text"
+                  id="portfolioTitle"
+                  value={portfolioTitle}
+                  onChange={(e) => setPortfolioTitle(e.target.value)}
+                  className="artisan-form-input"
+                  placeholder="Enter project title"
+                  disabled={portfolioLoading}
+                />
+              </div>
+
+              <div className="artisan-form-group">
+                <label htmlFor="portfolioFiles">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                     <circle cx="8.5" cy="8.5" r="1.5"></circle>
                     <polyline points="21 15 16 10 5 21"></polyline>
                   </svg>
-                  Select Image
+                  Select Images/Videos (Max 10)
                 </label>
                 <input
                   type="file"
-                  id="portfolioImage"
-                  accept="image/*"
+                  id="portfolioFiles"
+                  accept="image/*,video/*"
+                  multiple
                   onChange={handlePortfolioFileChange}
                   className="artisan-form-file-input"
                   disabled={portfolioLoading}
                 />
-                <label htmlFor="portfolioImage" className="artisan-file-label">
+                <label htmlFor="portfolioFiles" className="artisan-file-label">
                   <div className="file-icon">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1062,12 +1197,21 @@ const ArtisanProfilePage = () => {
                     </svg>
                   </div>
                   <div className="file-text">
-                    <strong>Click to upload</strong> portfolio image
+                    <strong>Click to upload</strong> images and videos
                   </div>
+                  <small style={{color: '#6b7280', fontSize: '12px'}}>Max 10 files, 100MB total</small>
                 </label>
-                {portfolioPreview && (
-                  <div className="image-preview">
-                    <img src={portfolioPreview} alt="Preview" className="preview-img" />
+                {portfolioPreviews.length > 0 && (
+                  <div className="image-preview" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px', marginTop: '10px'}}>
+                    {portfolioPreviews.map((preview, index) => (
+                      <div key={index} style={{position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1'}}>
+                        {preview.type === 'video' ? (
+                          <video src={preview.url} style={{width: '100%', height: '100%', objectFit: 'cover'}} controls />
+                        ) : (
+                          <img src={preview.url} alt={`Preview ${index + 1}`} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1088,9 +1232,21 @@ const ArtisanProfilePage = () => {
                   value={portfolioPrice}
                   onChange={(e) => setPortfolioPrice(e.target.value)}
                   className="artisan-form-input"
-                  placeholder="Enter price"
+                  placeholder="Enter price (optional)"
                   disabled={portfolioLoading}
                 />
+              </div>
+
+              <div className="artisan-form-group">
+                <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                  <input
+                    type="checkbox"
+                    checked={portfolioIsForSale}
+                    onChange={(e) => setPortfolioIsForSale(e.target.checked)}
+                    disabled={portfolioLoading}
+                  />
+                  <span>Available for Sale</span>
+                </label>
               </div>
 
               <div className="artisan-form-group">
@@ -1108,7 +1264,7 @@ const ArtisanProfilePage = () => {
                   value={portfolioDescription}
                   onChange={(e) => setPortfolioDescription(e.target.value)}
                   className="artisan-form-textarea"
-                  placeholder="Describe your work..."
+                  placeholder="Describe your project..."
                   rows="4"
                   disabled={portfolioLoading}
                 ></textarea>
@@ -1128,10 +1284,197 @@ const ArtisanProfilePage = () => {
                 type="button"
                 onClick={handlePortfolioUpload}
                 className="artisan-modal-btn submit"
-                disabled={portfolioLoading || !portfolioFile || !portfolioPrice || !portfolioDescription}
+                disabled={portfolioLoading || !portfolioFiles.length || !portfolioTitle || !portfolioDescription}
               >
                 {portfolioLoading ? 'Uploading...' : 'Upload'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gallery Modal */}
+      {isGalleryModalOpen && selectedProject && (
+        <div className="artisan-modal-overlay" onClick={() => setIsGalleryModalOpen(false)} style={{zIndex: 9999}}>
+          <div className="artisan-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '90vw', width: '800px'}}>
+            <div className="artisan-modal-header">
+              <div className="modal-header-content">
+                <div className="modal-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                </div>
+                <h2>{selectedProject.title}</h2>
+              </div>
+              <button onClick={() => setIsGalleryModalOpen(false)} className="modal-close-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            <div className="artisan-modal-body" style={{padding: '0'}}>
+              {selectedProject.media && selectedProject.media.length > 0 && (
+                <>
+                  <div style={{position: 'relative', background: '#000', minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                    {selectedProject.media[currentMediaIndex].type === 'video' ? (
+                      <video
+                        key={selectedProject.media[currentMediaIndex].url}
+                        src={selectedProject.media[currentMediaIndex].url.startsWith('http') ? selectedProject.media[currentMediaIndex].url : `http://localhost:5000${selectedProject.media[currentMediaIndex].url}`}
+                        controls
+                        autoPlay
+                        style={{width: '100%', maxHeight: '70vh', objectFit: 'contain'}}
+                      />
+                    ) : (
+                      <img
+                        src={selectedProject.media[currentMediaIndex].url.startsWith('http') ? selectedProject.media[currentMediaIndex].url : `http://localhost:5000${selectedProject.media[currentMediaIndex].url}`}
+                        alt={`${selectedProject.title} - Media ${currentMediaIndex + 1}`}
+                        style={{width: '100%', maxHeight: '70vh', objectFit: 'contain'}}
+                      />
+                    )}
+
+                    {selectedProject.media.length > 1 && (
+                      <>
+                        <button
+                          onClick={handlePrevMedia}
+                          style={{
+                            position: 'absolute',
+                            left: '10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(0,0,0,0.7)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            color: 'white',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                          </svg>
+                        </button>
+                        <button
+                          onClick={handleNextMedia}
+                          style={{
+                            position: 'absolute',
+                            right: '10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(0,0,0,0.7)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            color: 'white',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                          </svg>
+                        </button>
+                      </>
+                    )}
+
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '10px',
+                      right: '10px',
+                      background: 'rgba(0,0,0,0.7)',
+                      color: 'white',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '14px'
+                    }}>
+                      {currentMediaIndex + 1} / {selectedProject.media.length}
+                    </div>
+                  </div>
+
+                  {/* Thumbnail strip */}
+                  {selectedProject.media.length > 1 && (
+                    <div style={{
+                      display: 'flex',
+                      gap: '10px',
+                      padding: '15px',
+                      overflowX: 'auto',
+                      background: '#f8f9fa'
+                    }}>
+                      {selectedProject.media.map((media, index) => (
+                        <div
+                          key={index}
+                          onClick={() => setCurrentMediaIndex(index)}
+                          style={{
+                            minWidth: '80px',
+                            height: '80px',
+                            cursor: 'pointer',
+                            border: index === currentMediaIndex ? '3px solid #10b981' : '2px solid #e5e7eb',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            position: 'relative'
+                          }}
+                        >
+                          {media.type === 'video' ? (
+                            <>
+                              <video
+                                src={media.url.startsWith('http') ? media.url : `http://localhost:5000${media.url}`}
+                                style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                              />
+                              <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                background: 'rgba(0,0,0,0.7)',
+                                borderRadius: '50%',
+                                width: '30px',
+                                height: '30px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                              </div>
+                            </>
+                          ) : (
+                            <img
+                              src={media.url.startsWith('http') ? media.url : `http://localhost:5000${media.url}`}
+                              alt={`Thumbnail ${index + 1}`}
+                              style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Project details */}
+              <div style={{padding: '20px'}}>
+                {selectedProject.price > 0 && (
+                  <div style={{marginBottom: '10px', fontSize: '24px', fontWeight: '700', color: '#10b981'}}>
+                    ${selectedProject.price}
+                  </div>
+                )}
+                {selectedProject.description && (
+                  <p style={{margin: 0, color: '#4b5563', lineHeight: '1.6'}}>
+                    {selectedProject.description}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>

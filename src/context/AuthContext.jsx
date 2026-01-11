@@ -18,20 +18,16 @@ export const AuthProvider = ({ children }) => {
   // Initialize auth state from localStorage on app load
   useEffect(() => {
     const initializeAuth = () => {
-      console.log('🔄 Initializing auth state from localStorage...');
-      
       const storedToken = localStorage.getItem('token');
       const storedRole = localStorage.getItem('role');
       const storedUserId = localStorage.getItem('userId');
       
       if (storedToken && storedUserId) {
-        console.log('✅ Found existing auth session');
         setToken(storedToken);
         setRole(storedRole);
         setUserId(storedUserId);
         setIsLoggedIn(true);
       } else {
-        console.log('ℹ️ No existing auth session found');
         setIsLoggedIn(false);
       }
       

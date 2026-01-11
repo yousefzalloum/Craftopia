@@ -6,7 +6,7 @@ import '../styles/JobsPage.css';
 
 /**
  * JobsPage - Displays incoming jobs for artisans
- * Fetches and displays reservations from /reservations/artisan
+ * Fetches and displays orders from /orders/reservations/artisan
  */
 const JobsPage = () => {
   const { token } = useAuth();
@@ -29,7 +29,7 @@ const JobsPage = () => {
       setIsLoading(true);
       setError(null);
       
-      const data = await apiRequest('/reservations/artisan', {
+      const data = await apiRequest('/orders/reservations/artisan', {
         method: 'GET'
       });
 
@@ -46,7 +46,7 @@ const JobsPage = () => {
     try {
       setProcessingJobId(jobId);
       
-      await apiRequest(`/reservations/${jobId}/status`, {
+      await apiRequest(`/orders/${jobId}/status`, {
         method: 'PUT',
         body: JSON.stringify({ status: newStatus })
       });
@@ -64,11 +64,17 @@ const JobsPage = () => {
   };
 
   const handleAccept = (jobId) => {
-    handleStatusUpdate(jobId, 'Accepted');
+    handleStatusUpdate(jobId, 'accepted');
   };
 
   const handleReject = (jobId) => {
-    handleStatusUpdate(jobId, 'Rejected');
+    handleStatusUpdate(jobId, 'rejected');
+  };
+
+  const handleComplete = (jobId) => {
+    if (window.confirm('Mark this order as completed? The customer will be able to review your work.')) {
+      handleStatusUpdate(jobId, 'completed');
+    }
   };
 
   const handleSetPrice = (job) => {
@@ -92,22 +98,23 @@ const JobsPage = () => {
     try {
       setProcessingJobId(selectedJob._id);
       
-      // Check if this is an update (job has existing price) or initial proposal
-      const isUpdate = selectedJob.agreed_price && selectedJob.agreed_price > 0;
+      const orderId = selectedJob._id;
+      const payload = { price: price };
       
-      // Use the same /status endpoint for both initial and update
-      await apiRequest(`/reservations/${selectedJob._id}/status`, {
+      console.log('📤 Setting price for order:');
+      console.log('   Order ID:', orderId);
+      console.log('   Price:', price);
+      console.log('   Payload:', JSON.stringify(payload));
+      console.log('   Endpoint:', `/orders/${orderId}/status`);
+      
+      // Use the correct endpoint: PUT /orders/:id/status with { "price": value }
+      await apiRequest(`/orders/${orderId}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ price: proposedPrice })
+        body: JSON.stringify(payload)
       });
       
-      if (isUpdate) {
-        console.log(`✅ Price updated to $${proposedPrice} for job ${selectedJob._id}`);
-        alert(`Price updated to $${proposedPrice}! Customer has been notified.`);
-      } else {
-        console.log(`✅ Price $${proposedPrice} proposed for job ${selectedJob._id}`);
-        alert(`Price $${proposedPrice} proposed successfully!`);
-      }
+      console.log(`✅ Price $${price} set successfully for order ${orderId}`);
+      alert(`Price $${price} proposed successfully! Customer will be notified.`);
       
       setPriceModalOpen(false);
       setSelectedJob(null);
@@ -117,6 +124,11 @@ const JobsPage = () => {
       await fetchIncomingJobs();
     } catch (err) {
       console.error('❌ Error proposing price:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        status: err.status,
+        data: err.data
+      });
       alert(`Failed to propose price: ${err.message}`);
     } finally {
       setProcessingJobId(null);
@@ -137,6 +149,13 @@ const JobsPage = () => {
 
   const getStatusBadge = (status) => {
     const statusClasses = {
+      pending: 'status-badge status-pending',
+      offer_received: 'status-badge status-warning',
+      accepted: 'status-badge status-confirmed',
+      rejected: 'status-badge status-cancelled',
+      completed: 'status-badge status-completed',
+      cancelled: 'status-badge status-cancelled',
+      in_progress: 'status-badge status-warning',
       Pending: 'status-badge status-pending',
       Price_Proposed: 'status-badge status-warning',
       Negotiating: 'status-badge status-negotiating',
@@ -147,6 +166,13 @@ const JobsPage = () => {
     };
 
     const statusLabels = {
+      pending: 'Pending',
+      offer_received: 'Offer Sent',
+      accepted: 'Accepted',
+      rejected: 'Rejected',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      in_progress: 'In Progress',
       Price_Proposed: 'Price Proposed'
     };
 
@@ -158,7 +184,7 @@ const JobsPage = () => {
   };
 
   const getJobTypeIcon = (jobType) => {
-    return jobType === 'Order' ? '📦' : '🔧';
+    return jobType === 'portfolio_order' ? '📸' : '🛠️';
   };
 
   if (isLoading) {
@@ -195,34 +221,34 @@ const JobsPage = () => {
             All ({jobs.length})
           </button>
           <button 
-            className={`filter-btn ${filterStatus === 'Pending' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('Pending')}
+            className={`filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('pending')}
           >
-            Pending ({jobs.filter(j => j.status === 'Pending').length})
+            Pending ({jobs.filter(j => j.status === 'pending').length})
           </button>
           <button 
-            className={`filter-btn ${filterStatus === 'Price_Proposed' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('Price_Proposed')}
+            className={`filter-btn ${filterStatus === 'offer_received' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('offer_received')}
           >
-            Price Proposed ({jobs.filter(j => j.status === 'Price_Proposed').length})
+            Offers Sent ({jobs.filter(j => j.status === 'offer_received').length})
           </button>
           <button 
-            className={`filter-btn ${filterStatus === 'Negotiating' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('Negotiating')}
+            className={`filter-btn ${filterStatus === 'accepted' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('accepted')}
           >
-            Negotiating ({jobs.filter(j => j.status === 'Negotiating').length})
+            Accepted ({jobs.filter(j => j.status === 'accepted').length})
           </button>
           <button 
-            className={`filter-btn ${filterStatus === 'Accepted' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('Accepted')}
+            className={`filter-btn ${filterStatus === 'rejected' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('rejected')}
           >
-            Accepted ({jobs.filter(j => j.status === 'Accepted').length})
+            Rejected ({jobs.filter(j => j.status === 'rejected').length})
           </button>
           <button 
-            className={`filter-btn ${filterStatus === 'Rejected' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('Rejected')}
+            className={`filter-btn ${filterStatus === 'completed' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('completed')}
           >
-            Rejected ({jobs.filter(j => j.status === 'Rejected').length})
+            Completed ({jobs.filter(j => j.status === 'completed').length})
           </button>
           <button 
             className={`filter-btn ${filterStatus === 'Completed' ? 'active' : ''}`}
@@ -262,12 +288,12 @@ const JobsPage = () => {
           const query = searchQuery.toLowerCase();
           filteredJobs = filteredJobs.filter(job => {
             const customerName = (job.customer?.name || '').toLowerCase();
-            const title = (job.title || '').toLowerCase();
-            const description = (job.description || '').toLowerCase();
+            const title = (job.projectTitle || job.title || '').toLowerCase();
+            const note = (job.note || job.description || '').toLowerCase();
             
             return customerName.includes(query) ||
                    title.includes(query) ||
-                   description.includes(query);
+                   note.includes(query);
           });
         }
 
@@ -308,17 +334,19 @@ const JobsPage = () => {
                 {filteredJobs.map((job) => (
                 <tr key={job._id}>
                   <td className="job-type">
-                    <span style={{ fontSize: '1.5rem' }}>{getJobTypeIcon(job.job_type)}</span>
+                    <span style={{ fontSize: '1.5rem' }}>{getJobTypeIcon(job.type)}</span>
                     <br />
-                    <small>{job.job_type === 'Order' ? 'Order' : 'Request'}</small>
+                    <small>{job.type === 'portfolio_order' ? 'Portfolio' : 'Custom'}</small>
                   </td>
                   <td className="job-title">
-                    <strong style={{ fontSize: '1rem' }}>{job.title || 'N/A'}</strong>
-                    {job.reference_image && (
+                    <strong style={{ fontSize: '1rem' }}>{job.projectTitle || job.title || 'N/A'}</strong>
+                    {(job.projectImage || job.image) && (
                       <div style={{ marginTop: '0.5rem' }}>
                         <img 
-                          src={job.reference_image.startsWith('http') ? job.reference_image : `http://localhost:5000${job.reference_image}`}
-                          alt="Reference"
+                          src={(job.projectImage || job.image).startsWith('http') 
+                            ? (job.projectImage || job.image) 
+                            : `http://localhost:5000${job.projectImage || job.image}`}
+                          alt="Project"
                           style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e1e8ed' }}
                         />
                       </div>
@@ -341,7 +369,7 @@ const JobsPage = () => {
                   </td>
                   <td className="job-description">
                     <div style={{ maxWidth: '250px', minWidth: '150px', whiteSpace: 'normal', wordWrap: 'break-word', fontSize: '0.9rem', color: '#34495e' }}>
-                      {job.description || 'No description'}
+                      {job.note || job.description || 'No note provided'}
                     </div>
                   </td>
                   <td className="job-quantity" style={{ textAlign: 'center' }}>
@@ -352,19 +380,28 @@ const JobsPage = () => {
                   </td>
                   <td className="job-status">{getStatusBadge(job.status)}</td>
                   <td className="job-price">
-                    {job.agreed_price && job.agreed_price > 0 ? (
+                    {job.totalPrice && job.totalPrice > 0 ? (
+                      <div>
+                        <strong style={{ color: '#27ae60', fontSize: '1.1rem' }}>${job.totalPrice.toFixed(2)}</strong>
+                        {job.quantity > 1 && (job.unitPrice || job.price) && (
+                          <div style={{ fontSize: '0.75rem', color: '#7f8c8d', marginTop: '0.25rem' }}>
+                            ${(job.unitPrice || job.price).toFixed(2)} × {job.quantity}
+                          </div>
+                        )}
+                      </div>
+                    ) : job.agreed_price && job.agreed_price > 0 ? (
                       <strong style={{ color: '#27ae60', fontSize: '1.1rem' }}>${job.agreed_price.toFixed(2)}</strong>
                     ) : (
-                      <span style={{ color: '#95a5a6', fontSize: '0.85rem', fontStyle: 'italic' }}>Not set</span>
+                      <span style={{ color: '#95a5a6', fontSize: '0.85rem', fontStyle: 'italic' }}>Price Pending</span>
                     )}
                   </td>
                   <td className="job-created">
                     <small>{formatDate(job.createdAt)}</small>
                   </td>
                   <td className="job-actions">
-                    {job.status === 'Pending' ? (
+                    {job.status === 'pending' ? (
                       <div className="action-buttons">
-                        {job.job_type === 'Custom_Request' && (!job.agreed_price || job.agreed_price === 0) ? (
+                        {job.type === 'custom_request' && (!job.totalPrice || job.totalPrice === 0) ? (
                           <button
                             className="btn-set-price"
                             onClick={() => handleSetPrice(job)}
@@ -400,40 +437,29 @@ const JobsPage = () => {
                           {processingJobId === job._id ? '⏳' : '✗'} Reject
                         </button>
                       </div>
-                    ) : (job.status === 'Negotiating' || job.status === 'Price_Proposed') ? (
+                    ) : job.status === 'accepted' ? (
                       <div className="action-buttons">
                         <button
-                          className="btn-edit-price"
-                          onClick={() => {
-                            setSelectedJob(job);
-                            setProposedPrice(job.agreed_price?.toString() || '');
-                            setPriceModalOpen(true);
-                          }}
+                          className="btn-complete"
+                          onClick={() => handleComplete(job._id)}
                           disabled={processingJobId === job._id}
                           style={{
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            background: '#27ae60',
                             color: 'white',
                             padding: '0.5rem 1rem',
                             border: 'none',
                             borderRadius: '6px',
-                            cursor: 'pointer',
+                            cursor: processingJobId === job._id ? 'not-allowed' : 'pointer',
                             fontSize: '0.9rem',
                             fontWeight: 'bold',
-                            marginBottom: '0.5rem',
                             width: '100%',
-                            transition: 'transform 0.2s'
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem'
                           }}
-                          onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
-                          onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
                         >
-                          {processingJobId === job._id ? '⏳' : '✏️'} Edit Price
-                        </button>
-                        <button
-                          className="btn-reject"
-                          onClick={() => handleReject(job._id)}
-                          disabled={processingJobId === job._id}
-                        >
-                          {processingJobId === job._id ? '⏳' : '✗'} Reject
+                          {processingJobId === job._id ? '⏳ Processing...' : '✅ Mark Complete'}
                         </button>
                       </div>
                     ) : (

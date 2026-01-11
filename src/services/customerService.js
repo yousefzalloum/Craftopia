@@ -251,23 +251,23 @@ export const createReservation = async (reservationData) => {
  */
 export const getCustomerReservations = async () => {
   try {
-    console.log('📡 Fetching customer reservations from GET /reservations/customer');
-    const response = await get('/reservations/customer');
-    console.log('✅ Customer reservations fetched:', response);
+    console.log('📡 Fetching customer orders from GET /orders/reservations/customer');
+    const response = await get('/orders/reservations/customer');
+    console.log('✅ Customer orders fetched:', response);
     
     // Handle different response structures
     if (Array.isArray(response)) {
       return response;
-    } else if (response.reservations && Array.isArray(response.reservations)) {
-      return response.reservations;
+    } else if (response.orders && Array.isArray(response.orders)) {
+      return response.orders;
     } else if (response.data && Array.isArray(response.data)) {
       return response.data;
     }
     
-    console.warn('⚠️ Unexpected reservations response structure:', response);
+    console.warn('⚠️ Unexpected orders response structure:', response);
     return [];
   } catch (error) {
-    console.error('❌ Error fetching customer reservations:', error);
+    console.error('❌ Error fetching customer orders:', error);
     throw new Error(parseApiError(error));
   }
 };

@@ -13,9 +13,7 @@ const Home = () => {
     const fetchGalleryFeed = async () => {
       try {
         setGalleryLoading(true);
-        console.log('🎨 Fetching gallery feed...');
         const data = await get('/portfolio/feed');
-        console.log('✅ Gallery feed fetched:', data);
         setGalleryFeed(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('❌ Failed to fetch gallery feed:', err);
@@ -117,7 +115,8 @@ const Home = () => {
                         objectFit: 'cover'
                       }}
                       onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                        e.target.onerror = null;
+                        e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23999" font-family="sans-serif" font-size="18"%3EImage Not Found%3C/text%3E%3C/svg%3E';
                       }}
                     />
                   </div>

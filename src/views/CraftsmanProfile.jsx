@@ -703,8 +703,8 @@ const CraftsmanProfile = () => {
                         }
                         alt={description || `Portfolio ${index + 1}`}
                         onError={(e) => {
-                          console.error('❌ Failed to load portfolio image:', e.target.src);
-                          e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                          e.target.onerror = null;
+                          e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"300\"%3E%3Crect width=\"400\" height=\"300\" fill=\"%23f0f0f0\"/%3E%3Ctext x=\"50%25\" y=\"50%25\" dominant-baseline=\"middle\" text-anchor=\"middle\" fill=\"%23999\" font-family=\"sans-serif\" font-size=\"18\"%3EImage Not Found%3C/text%3E%3C/svg%3E';
                         }}
                       />
                     </div>

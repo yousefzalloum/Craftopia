@@ -7,9 +7,9 @@
 const envApiUrl = import.meta.env.VITE_API_BASE_URL;
 export const API_BASE_URL = envApiUrl || 'http://localhost:5000/api';
 
-// Debug: Log the API base URL and source
-console.log('🔗 API Base URL:', API_BASE_URL);
-console.log('📦 Using VITE_API_BASE_URL:', envApiUrl ? 'Yes (from env variable)' : 'No (using default)');
+// Development mode flag
+const isDev = import.meta.env.DEV;
+const enableApiLogs = false; // Set to true only when debugging API issues
 
 /**
  * Custom error class for API errors
@@ -32,7 +32,7 @@ export class ApiError extends Error {
 export const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  console.log('📡 API Request:', url, options.method || 'GET');
+  if (enableApiLogs) console.log('📡 API Request:', url, options.method || 'GET');
   
   // Default headers
   const headers = {
@@ -52,12 +52,12 @@ export const apiRequest = async (endpoint, options = {}) => {
       headers,
     });
 
-    console.log('✅ Response received:', response.status, response.statusText);
+    if (enableApiLogs) console.log('✅ Response received:', response.status, response.statusText);
 
     // Parse response body
     const data = await response.json().catch(() => ({}));
     
-    console.log('📦 Response data:', data);
+    if (enableApiLogs) console.log('📦 Response data:', data);
 
     // Handle error responses
     if (!response.ok) {

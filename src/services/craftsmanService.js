@@ -106,12 +106,8 @@ export const getArtisanProfile = async () => {
     // Token is automatically included by the get() helper from localStorage
     const response = await get('/artisans/profile');
     
-    console.log('✅ Artisan profile fetched successfully:', {
-      _id: response._id,
-      name: response.name,
-      email: response.email,
-      role: response.role
-    });
+    console.log('✅ Artisan profile fetched successfully:', response);
+    console.log('📦 Portfolio Images:', response.portfolioImages);
     
     return response;
   } catch (error) {
@@ -217,26 +213,45 @@ export const uploadProfilePicture = async (imageFile) => {
  * @param {string} description - Description of the work
  * @returns {Promise<Object>} Response with portfolio array
  */
-export const uploadPortfolioImage = async (imageFile, price, description) => {
+/**
+ * Get all portfolio projects for the authenticated artisan
+ * @returns {Promise<Array>} Array of portfolio projects
+ */
+export const getArtisanProjects = async () => {
   try {
-    console.log('🎨 Uploading portfolio image...');
-    console.log('🎨 File:', imageFile.name, imageFile.type, imageFile.size);
-    console.log('🎨 Price:', price);
-    console.log('🎨 Description:', description);
+    const response = await get('/artisans/my-portfolio');
+    console.log('📦 Fetched artisan projects:', response);
     
-    // Create FormData and append the image file, price, and description
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    formData.append('price', price);
-    formData.append('description', description);
+    // Handle different response structures
+    if (Array.isArray(response)) {
+      return response;
+    } else if (response.portfolio && Array.isArray(response.portfolio)) {
+      return response.portfolio;
+    } else if (response.data && Array.isArray(response.data.portfolio)) {
+      return response.data.portfolio;
+    } else if (response.data && Array.isArray(response.data)) {
+      return response.data;
+    }
     
+    return [];
+  } catch (error) {
+    console.error('❌ Failed to fetch artisan projects:', error);
+    return [];
+  }
+};
+
+/**
+ * Upload portfolio project with multiple images/videos
+ * @param {FormData} formData - Form data with files, title, description, price, isForSale
+ * @returns {Promise<Object>} Response with project data
+ */
+export const uploadPortfolioImage = async (formData) => {
+  try {
     // Get token
     const token = localStorage.getItem('token');
     
     // Use relative path to work with Vite proxy
-    const url = '/api/artisans/upload-portfolio';
-    
-    console.log('🎨 Upload URL:', url);
+    const url = '/api/artisans/portfolio';
     
     const response = await fetch(url, {
       method: 'POST',
@@ -249,58 +264,49 @@ export const uploadPortfolioImage = async (imageFile, price, description) => {
     const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to upload portfolio image');
+      throw new Error(data.message || 'Failed to upload portfolio project');
     }
     
-    console.log('✅ Portfolio image uploaded successfully:', data);
-    console.log('🎨 Portfolio images:', data.portfolioImages);
     return data;
   } catch (error) {
-    console.error('❌ Failed to upload portfolio image:', error);
-    throw new Error(error.message || 'Failed to upload portfolio image');
+    console.error('❌ Failed to upload portfolio project:', error);
+    throw new Error(error.message || 'Failed to upload portfolio project');
   }
 };
 
 /**
- * Delete portfolio image (authenticated endpoint)
+ * Delete portfolio project (authenticated endpoint)
  * Requires valid JWT token in Authorization header
- * @param {string} imageUrl - The image URL to delete (e.g., "/uploads/image.jpg")
+ * @param {string} projectId - The project ID to delete
  * @returns {Promise<Object>} Response with updated portfolioImages array
  */
-export const deletePortfolioImage = async (imageUrl) => {
+export const deletePortfolioImage = async (projectId) => {
   try {
-    console.log('🗑️ Deleting portfolio image:', imageUrl);
-    
     // Get token
     const token = localStorage.getItem('token');
     
     // Get API base URL from environment or use default
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-    const url = `${baseUrl}/artisans/delete-portfolio`;
-    
-    console.log('🗑️ Delete URL:', url);
+    const url = `${baseUrl}/artisans/portfolio/${projectId}`;
     
     const response = await fetch(url, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ imageUrl })
+      }
     });
     
     const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to delete portfolio image');
+      throw new Error(data.message || 'Failed to delete portfolio project');
     }
     
-    console.log('✅ Portfolio image deleted successfully:', data);
-    console.log('🎨 Remaining portfolio images:', data.portfolioImages);
     return data;
   } catch (error) {
-    console.error('❌ Failed to delete portfolio image:', error);
-    throw new Error(error.message || 'Failed to delete portfolio image');
+    console.error('❌ Failed to delete portfolio project:', error);
+    throw new Error(error.message || 'Failed to delete portfolio project');
   }
 };
 
@@ -543,7 +549,8 @@ const craftsmanService = {
   logoutCraftsman,
   changeArtisanPassword,
   getArtisanReviews,
-  getPortfolioComments
+  getPortfolioComments,
+  getArtisanProjects
 };
 
 export default craftsmanService;

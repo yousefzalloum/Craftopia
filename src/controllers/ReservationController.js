@@ -8,7 +8,7 @@ import {
   addReservation 
 } from '../models/Reservation';
 import { getCraftById } from '../models/Craft';
-import { createReservation } from '../utils/api';
+import { createReservation, post } from '../utils/api';
 
 export const ReservationController = {
   // Get all reservations
@@ -212,61 +212,54 @@ export const ReservationController = {
   },
 
   // Create Portfolio Order (from portfolio item)
-  createPortfolioOrder: async (artisanId, title, referenceImage, quantity, description, itemPrice) => {
+  createPortfolioOrder: async (artisanId, projectId, quantity, deliveryDate, note) => {
     try {
-      console.log('📦 Creating portfolio order:', { artisanId, title, referenceImage, quantity, description, itemPrice });
-      console.log('💰 Item price type and value:', typeof itemPrice, itemPrice);
+      console.log('📦 Creating portfolio order:', { artisanId, projectId, quantity, deliveryDate, note });
       
       const orderData = {
         artisanId,
-        job_type: 'Order',
-        title,
-        reference_image: referenceImage,
+        projectId,  // Required for normal orders - backend calculates price
         quantity: parseInt(quantity) || 1,
-        description
+        deliveryDate,  // Required delivery date
+        note: note || ''  // Optional note field
       };
 
-      // Add agreed_price if itemPrice is provided
-      if (itemPrice && itemPrice > 0) {
-        orderData.agreed_price = parseFloat(itemPrice) * parseInt(quantity);
-        console.log('✅ Calculated agreed_price:', orderData.agreed_price);
-      } else {
-        console.log('⚠️ No price provided or price is 0:', itemPrice);
-      }
-
-      console.log('📤 Sending order data:', orderData);
-      const response = await createReservation(orderData);
+      console.log('📤 Sending order data to /api/orders:', orderData);
+      // Use unified /orders endpoint
+      const response = await post('/orders', orderData);
       console.log('✅ Portfolio order created:', response);
       
       return {
         success: true,
-        reservation: response,
+        order: response,
         message: 'Order placed successfully!'
       };
     } catch (error) {
       console.error('❌ Error creating portfolio order:', error);
       return {
         success: false,
-        reservation: null,
+        order: null,
         message: error.message || 'Failed to create order'
       };
     }
   },
 
   // Create Custom Request (from booking button)
-  createCustomRequest: async (artisanId, title, description, deadline) => {
+  createCustomRequest: async (artisanId, customTitle, note, deliveryDate, quantity = 1) => {
     try {
-      console.log('📝 Creating custom request:', { artisanId, title, description, deadline });
+      console.log('📝 Creating custom request:', { artisanId, customTitle, note, deliveryDate, quantity });
       
       const requestData = {
         artisanId,
-        job_type: 'Custom_Request',
-        title,
-        description,
-        deadline
+        customTitle,  // Required for custom requests (no projectId)
+        note,
+        deliveryDate,  // Required delivery date
+        quantity: parseInt(quantity) || 1
       };
 
-      const response = await createReservation(requestData);
+      console.log('📤 Sending custom request to /api/orders:', requestData);
+      // Use unified /orders endpoint (same as normal orders)
+      const response = await post('/orders', requestData);
       console.log('✅ Custom request created:', response);
       
       return {

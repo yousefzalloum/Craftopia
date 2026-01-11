@@ -4,9 +4,7 @@ const notificationService = {
   // Get all notifications for the authenticated user
   getNotifications: async () => {
     try {
-      console.log('📡 Fetching notifications from /notifications');
       const data = await get('/notifications');
-      console.log('✅ Raw notifications response:', data);
       
       // Handle different response structures
       if (Array.isArray(data)) {
@@ -16,8 +14,6 @@ const notificationService = {
       } else if (data.data && Array.isArray(data.data)) {
         return data.data;
       }
-      
-      console.warn('⚠️ Unexpected notifications response structure:', data);
       return [];
     } catch (error) {
       console.error('❌ Error fetching notifications:', error);
@@ -78,7 +74,6 @@ const notificationService = {
     try {
       const notifications = await notificationService.getNotifications();
       const unreadCount = notifications.filter(n => !n.isRead && !n.read).length;
-      console.log('📊 Unread notifications count:', unreadCount);
       return unreadCount;
     } catch (error) {
       console.error('❌ Error getting unread count:', error);
@@ -89,7 +84,6 @@ const notificationService = {
   // Update price for a reservation (artisan response to negotiation)
   updateNegotiationPrice: async (reservationId, newPrice) => {
     try {
-      console.log('📡 Updating price for reservation:', reservationId, 'New price:', newPrice);
       const data = await put(`/reservations/${reservationId}/update-price`, {
         agreed_price: newPrice
       });

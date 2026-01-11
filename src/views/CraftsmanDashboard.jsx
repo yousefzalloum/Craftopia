@@ -50,7 +50,6 @@ const CraftsmanDashboard = () => {
       if (profile) {
         console.log('📦 Using cached profile from AuthContext');
         setCraftsman(profile);
-        setSelectedTimes(profile.availableTimes || []);
         return;
       }
       
@@ -96,12 +95,12 @@ const CraftsmanDashboard = () => {
       setIsLoadingJobs(true);
       setJobsError(null);
       
-      const data = await apiRequest('/reservations/artisan', {
+      const data = await apiRequest('/orders/reservations/artisan', {
         method: 'GET'
       });
 
-      // Filter for accepted jobs only
-      const accepted = (data || []).filter(job => job.status === 'Accepted');
+      // Filter for accepted jobs only (lowercase 'accepted')
+      const accepted = (data || []).filter(job => job.status === 'accepted');
       
       // Remove duplicates based on _id
       const uniqueAccepted = accepted.reduce((acc, current) => {
@@ -112,6 +111,7 @@ const CraftsmanDashboard = () => {
         return acc;
       }, []);
       
+      console.log('✅ Accepted orders loaded:', uniqueAccepted.length);
       setAcceptedJobs(uniqueAccepted);
     } catch (err) {
       console.error('❌ Error fetching accepted jobs:', err);
@@ -134,27 +134,27 @@ const CraftsmanDashboard = () => {
   };
 
   const handleMarkAsCompleted = async (bookingId) => {
-    if (!window.confirm('Mark this booking as completed?')) {
+    if (!window.confirm('Mark this order as completed? The customer will be able to review your work.')) {
       return;
     }
 
     try {
       setCompletingJobId(bookingId);
       
-      await apiRequest(`/reservations/${bookingId}/status`, {
+      await apiRequest(`/orders/${bookingId}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ status: 'Completed' })
+        body: JSON.stringify({ status: 'completed' })
       });
 
-      console.log(`✅ Booking ${bookingId} marked as completed`);
+      console.log(`✅ Order ${bookingId} marked as completed`);
       
       // Refresh bookings list to remove completed booking
       await fetchAcceptedJobs();
       
-      alert('Booking marked as completed successfully!');
+      alert('Order marked as completed successfully! Customer can now review your work.');
     } catch (err) {
-      console.error(`❌ Error marking booking as completed:`, err);
-      alert(`Failed to mark booking as completed: ${err.message}`);
+      console.error(`❌ Error marking order as completed:`, err);
+      alert(`Failed to mark order as completed: ${err.message}`);
     } finally {
       setCompletingJobId(null);
     }
@@ -402,22 +402,54 @@ const CraftsmanDashboard = () => {
                         <h3>{booking.customer?.name || 'N/A'}</h3>
                       </div>
                       <div className="booking-price">
-                        ${(booking.agreed_price || booking.total_price || 0).toFixed(2)}
+                        ${(booking.totalPrice || booking.price || booking.agreed_price || booking.total_price || 0).toFixed(2)}
                       </div>
                     </div>
+                    
+                    {/* Order Type Badge */}
+                    {booking.type && (
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '0.3rem 0.7rem',
+                          background: booking.type === 'portfolio_order' ? '#e3f2fd' : '#fff3e0',
+                          color: booking.type === 'portfolio_order' ? '#1976d2' : '#f57c00',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}>
+                          {booking.type === 'portfolio_order' ? '📸 Portfolio Order' : '🛠️ Custom Request'}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Project Title and Image for Portfolio Orders */}
+                    {booking.projectTitle && (
+                      <div className="booking-info-row">
+                        <span className="label">📝 Project:</span>
+                        <span className="value" style={{ fontWeight: 'bold' }}>{booking.projectTitle.replace(/^"|"$/g, '')}</span>
+                      </div>
+                    )}
+                    
+                    {booking.quantity > 1 && (
+                      <div className="booking-info-row">
+                        <span className="label">📦 Quantity:</span>
+                        <span className="value">{booking.quantity}</span>
+                      </div>
+                    )}
                     
                     <div className="booking-card-body">
                       <div className="booking-info-row">
                         <span className="label">📞 Phone:</span>
-                        <span className="value">{booking.customer?.phone_number || 'N/A'}</span>
+                        <span className="value">{booking.customer?.phone || booking.customer?.phone_number || 'N/A'}</span>
                       </div>
                       <div className="booking-info-row">
-                        <span className="label">📝 Description:</span>
-                        <span className="value">{booking.description || 'No description'}</span>
+                        <span className="label">📝 Note:</span>
+                        <span className="value">{booking.note || booking.description || 'No description'}</span>
                       </div>
                       <div className="booking-info-row">
-                        <span className="label">📅 Start Date:</span>
-                        <span className="value">{formatDate(booking.start_date || booking.createdAt)}</span>
+                        <span className="label">🚚 Delivery Date:</span>
+                        <span className="value">{booking.deliveryDate ? formatDate(booking.deliveryDate) : formatDate(booking.start_date || booking.createdAt)}</span>
                       </div>
                       <div className="booking-info-row">
                         <span className="label">✅ Status:</span>
@@ -425,7 +457,7 @@ const CraftsmanDashboard = () => {
                       </div>
                     </div>
 
-                    {booking.status === 'Accepted' && (
+                    {booking.status === 'accepted' && (
                       <div className="booking-card-footer">
                         <button
                           className="btn-mark-completed"

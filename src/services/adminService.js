@@ -54,19 +54,20 @@ export const getStats = async () => {
     // If the response is nested (e.g., { stats: { ... } }), extract it
     const stats = response.stats || response;
     
-    // Calculate totalUsers if not provided
+    // Map backend field names to frontend expected names
     const customers = stats.customers || 0;
     const artisans = stats.artisans || 0;
-    const totalUsers = stats.totalUsers || (customers + artisans);
+    const totalUsers = customers + artisans;
     
-    // Ensure all required fields exist with defaults
+    // Backend uses 'reviews' and 'reservations' instead of 'totalReviews' and 'totalReservations'
     return {
       totalUsers,
       customers,
       artisans,
-      totalReservations: stats.totalReservations || 0,
-      completedJobs: stats.completedJobs || 0,
-      totalRevenue: stats.totalRevenue || 0
+      totalReservations: stats.reservations || stats.totalReservations || 0,
+      totalReviews: stats.reviews || stats.totalReviews || 0,
+      completedJobs: stats.completedJobs || stats.completed || 0,
+      totalRevenue: stats.totalRevenue || stats.revenue || 0
     };
   } catch (error) {
     console.error('❌ Failed to fetch stats:', error.message);
@@ -78,6 +79,7 @@ export const getStats = async () => {
         customers: 0,
         artisans: 0,
         totalReservations: 0,
+        totalReviews: 0,
         completedJobs: 0,
         totalRevenue: 0
       };
