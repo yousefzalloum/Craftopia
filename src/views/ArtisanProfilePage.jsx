@@ -607,7 +607,7 @@ const ArtisanProfilePage = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Portfolio</div>
-                <div className="stat-value">{profileData.portfolioImages?.length || 0}</div>
+                <div className="stat-value">{profileData.portfolio?.length || 0}</div>
               </div>
             </div>
 

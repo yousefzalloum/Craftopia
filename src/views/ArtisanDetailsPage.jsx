@@ -466,7 +466,6 @@ const ArtisanDetailsPage = () => {
         setOrderSuccess(result.message);
         setTimeout(() => {
           handleCloseOrderModal();
-          alert('Order placed successfully! You can track it in your orders.');
           navigate('/reservations');
         }, 1500);
       } else {

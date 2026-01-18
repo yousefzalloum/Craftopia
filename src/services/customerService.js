@@ -251,8 +251,8 @@ export const createReservation = async (reservationData) => {
  */
 export const getCustomerReservations = async () => {
   try {
-    console.log('📡 Fetching customer orders from GET /orders/customer');
-    const response = await get('/orders/customer');
+    console.log('📡 Fetching customer orders from GET /orders/customer?populate=artisan');
+    const response = await get('/orders/customer?populate=artisan');
     console.log('✅ Customer orders fetched:', response);
     
     // Handle different response structures

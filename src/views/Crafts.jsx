@@ -19,29 +19,59 @@ const Crafts = () => {
   const [error, setError] = useState(null);
 
   // Available craft types and locations
-  const craftTypes = ['Carpentry', 'Plumbing', 'Electrical', 'Painting', 'Welding', 'Masonry'];
-  const locations = ['Hebron', 'Ramallah', 'Nablus', 'Bethlehem', 'Jerusalem', 'Jenin'];
+  const craftTypes = [
+    'Carpentry', 
+    'Plumbing', 
+    'Electrical', 
+    'Painting', 
+    'Welding', 
+    'Masonry',
+    'Blacksmith',
+    'Mechanic',
+    'HVAC',
+    'Tiling',
+    'Glasswork',
+    'Metalwork',
+    'Furniture Making',
+    'Construction',
+    'Roofing',
+    'Flooring',
+    'Landscaping'
+  ];
+  
+  const locations = [
+    'Hebron',
+    'Ramallah', 
+    'Nablus', 
+    'Bethlehem', 
+    'Jerusalem', 
+    'Jenin',
+    'Tulkarm',
+    'Qalqilya',
+    'Jericho',
+    'Tubas',
+    'Salfit',
+    'Gaza',
+    'Khan Yunis',
+    'Rafah',
+    'Jabalia',
+    'Beit Lahia',
+    'Deir al-Balah'
+  ];
 
-  // Fetch artisans from API only when filters change
+  // Fetch all artisans once on mount
   useEffect(() => {
     const fetchArtisans = async () => {
       try {
         setLoading(true);
         setError(null);
-        const filters = {};
-        if (selectedCraftType) filters.craftType = selectedCraftType;
-        if (selectedLocation) filters.location = selectedLocation;
-        const data = await getAllCraftsmen(filters);
-        // Rating filter (server doesn't support, so do it here)
-        let filtered = data;
-        if (selectedRating) {
-          const minRating = parseFloat(selectedRating);
-          filtered = filtered.filter(artisan => {
-            const rating = artisan.averageRating ?? artisan.rating ?? 0;
-            return rating >= minRating;
-          });
-        }
-        setArtisansRaw(filtered);
+        
+        // Fetch all artisans without filters (backend doesn't filter properly)
+        const data = await getAllCraftsmen({});
+        
+        console.log('📦 All artisans fetched:', data?.length || 0);
+        
+        setArtisansRaw(data || []);
       } catch (err) {
         console.error('❌ Failed to fetch artisans:', err);
         setError(err.message || 'Failed to load artisans');
@@ -50,19 +80,54 @@ const Crafts = () => {
       }
     };
     fetchArtisans();
-  }, [selectedCraftType, selectedLocation, selectedRating]);
+  }, []); // Only fetch once on mount
 
-  // Client-side search only (no API call)
+  // Apply all filters on client side
   const artisans = useMemo(() => {
-    if (!searchQuery) return artisansRaw;
-    const query = searchQuery.toLowerCase();
-    return artisansRaw.filter(artisan =>
-      artisan.name?.toLowerCase().includes(query) ||
-      artisan.description?.toLowerCase().includes(query) ||
-      artisan.craftType?.toLowerCase().includes(query) ||
-      artisan.location?.toLowerCase().includes(query)
-    );
-  }, [searchQuery, artisansRaw]);
+    let filtered = artisansRaw;
+    
+    // Apply craft type filter
+    if (selectedCraftType) {
+      filtered = filtered.filter(artisan => 
+        artisan.craftType === selectedCraftType
+      );
+    }
+    
+    // Apply location filter
+    if (selectedLocation) {
+      filtered = filtered.filter(artisan => 
+        artisan.location === selectedLocation
+      );
+    }
+    
+    // Apply rating filter
+    if (selectedRating) {
+      const minRating = parseFloat(selectedRating);
+      filtered = filtered.filter(artisan => {
+        const rating = artisan.averageRating ?? artisan.rating ?? 0;
+        return rating >= minRating;
+      });
+    }
+    
+    // Apply search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(artisan =>
+        artisan.name?.toLowerCase().includes(query) ||
+        artisan.description?.toLowerCase().includes(query) ||
+        artisan.craftType?.toLowerCase().includes(query) ||
+        artisan.location?.toLowerCase().includes(query)
+      );
+    }
+    
+    console.log('✅ Filtered artisans:', {
+      total: artisansRaw.length,
+      filtered: filtered.length,
+      filters: { selectedCraftType, selectedLocation, selectedRating, searchQuery }
+    });
+    
+    return filtered;
+  }, [searchQuery, artisansRaw, selectedCraftType, selectedLocation, selectedRating]);
 
   if (loading) {
     return <Loading />;

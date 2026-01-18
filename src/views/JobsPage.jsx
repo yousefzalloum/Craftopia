@@ -19,6 +19,8 @@ const JobsPage = () => {
   const [priceModalOpen, setPriceModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [proposedPrice, setProposedPrice] = useState('');
+  const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  const [jobToComplete, setJobToComplete] = useState(null);
 
   useEffect(() => {
     fetchIncomingJobs();
@@ -81,9 +83,21 @@ const JobsPage = () => {
   };
 
   const handleComplete = (jobId) => {
-    if (window.confirm('Mark this order as completed? The customer will be able to review your work.')) {
-      handleStatusUpdate(jobId, 'completed');
+    setJobToComplete(jobId);
+    setCompleteModalOpen(true);
+  };
+
+  const confirmComplete = async () => {
+    if (jobToComplete) {
+      await handleStatusUpdate(jobToComplete, 'completed');
+      setCompleteModalOpen(false);
+      setJobToComplete(null);
     }
+  };
+
+  const cancelComplete = () => {
+    setCompleteModalOpen(false);
+    setJobToComplete(null);
   };
 
   const handleSetPrice = (job) => {
@@ -332,7 +346,6 @@ const JobsPage = () => {
                   <th>Customer Info</th>
                   <th>Description</th>
                   <th>Qty</th>
-                  <th>Deadline</th>
                   <th>Status</th>
                   <th>Price</th>
                   <th>Created</th>
@@ -385,9 +398,6 @@ const JobsPage = () => {
                   </td>
                   <td className="job-quantity" style={{ textAlign: 'center' }}>
                     <strong style={{ fontSize: '1.1rem' }}>{job.quantity || 1}</strong>
-                  </td>
-                  <td className="job-deadline">
-                    {job.deadline ? formatDate(job.deadline) : '—'}
                   </td>
                   <td className="job-status">{getStatusBadge(job.status)}</td>
                   <td className="job-price">
@@ -604,6 +614,149 @@ const JobsPage = () => {
                 }}
               >
                 {processingJobId === selectedJob._id ? '⏳ Submitting...' : '✓ Submit Price'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Completion Confirmation Modal */}
+      {completeModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          backdropFilter: 'blur(4px)',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+            borderRadius: '20px',
+            padding: '2.5rem',
+            maxWidth: '480px',
+            width: '90%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            transform: 'scale(1)',
+            animation: 'slideUp 0.3s ease-out',
+            border: '1px solid rgba(255,255,255,0.5)'
+          }}>
+            {/* Icon */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              background: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              boxShadow: '0 10px 30px rgba(39, 174, 96, 0.3)'
+            }}>
+              <span style={{ fontSize: '2.5rem' }}>✓</span>
+            </div>
+
+            {/* Title */}
+            <h2 style={{
+              margin: '0 0 1rem 0',
+              color: '#2c3e50',
+              fontSize: '1.8rem',
+              fontWeight: 'bold',
+              textAlign: 'center'
+            }}>
+              Mark as Complete?
+            </h2>
+
+            {/* Message */}
+            <p style={{
+              color: '#7f8c8d',
+              fontSize: '1.05rem',
+              lineHeight: '1.6',
+              textAlign: 'center',
+              margin: '0 0 2rem 0'
+            }}>
+              This will notify the customer that their order is ready. They'll be able to review your work and provide feedback.
+            </p>
+
+            {/* Info Box */}
+            <div style={{
+              background: '#e8f5e9',
+              border: '2px solid #27ae60',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '2rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
+                <span style={{ fontSize: '1.5rem' }}>ℹ️</span>
+                <p style={{
+                  margin: 0,
+                  color: '#27ae60',
+                  fontSize: '0.95rem',
+                  fontWeight: '500',
+                  lineHeight: '1.5'
+                }}>
+                  Make sure you've delivered the work to the customer before marking it complete.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={cancelComplete}
+                style={{
+                  flex: 1,
+                  padding: '1rem',
+                  background: '#ecf0f1',
+                  color: '#2c3e50',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '1.05rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+                onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+                onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+              >
+                ✗ Cancel
+              </button>
+              <button
+                onClick={confirmComplete}
+                style={{
+                  flex: 1,
+                  padding: '1rem',
+                  background: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '1.05rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 15px rgba(39, 174, 96, 0.4)'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 6px 20px rgba(39, 174, 96, 0.5)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 15px rgba(39, 174, 96, 0.4)';
+                }}
+              >
+                ✓ Mark Complete
               </button>
             </div>
           </div>

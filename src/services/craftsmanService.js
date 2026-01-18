@@ -374,12 +374,27 @@ export const updateCraftsmanProfile = async (craftsmanId, updateData) => {
  */
 export const getAllCraftsmen = async (filters = {}) => {
   try {
+    console.log('🔍 getAllCraftsmen called with filters:', filters);
+    
     const queryParams = new URLSearchParams(filters).toString();
     // Try /artisans endpoint (primary), fallback to /craftsmen if needed
     const endpoint = queryParams ? `/artisans?${queryParams}` : '/artisans';
-    console.log('🔍 Fetching artisans from:', endpoint);
+    
+    console.log('🔗 Fetching artisans from endpoint:', endpoint);
+    console.log('📋 Query string:', queryParams);
+    
     const response = await get(endpoint);
-    console.log('✅ Artisans response:', response.length || response?.length || 'unknown length');
+    
+    console.log('✅ Artisans response received:', {
+      count: response.length || response?.length || 0,
+      hasData: !!response,
+      firstItem: response?.[0] ? {
+        craftType: response[0].craftType,
+        location: response[0].location,
+        name: response[0].name
+      } : null
+    });
+    
     return response;
   } catch (error) {
     console.error('❌ Failed to fetch artisans from API:', error.message);

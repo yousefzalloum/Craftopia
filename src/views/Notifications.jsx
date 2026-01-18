@@ -147,7 +147,8 @@ const Notifications = () => {
     <div className="notifications-page">
       <div className="notifications-container">
         <div className="notifications-header">
-          <h1>Notifications</h1>
+          <h1>🔔 Notifications</h1>
+          <div className="header-divider"></div>
           {unreadCount > 0 && (
             <span className="unread-badge">{unreadCount} unread</span>
           )}

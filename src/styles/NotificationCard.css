@@ -1,42 +1,46 @@
 /* Notification Card Component Styles */
 .notification-card {
   display: flex;
-  gap: 15px;
-  padding: 20px;
+  gap: 1.25rem;
+  padding: 1.5rem;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(44, 62, 80, 0.08);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   border-left: 4px solid transparent;
+  border: 1px solid rgba(149, 165, 166, 0.1);
 }
 
 .notification-card:hover {
-  transform: translateX(5px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(44, 62, 80, 0.12);
+  border-left-color: #e67e22;
 }
 
 .notification-card.unread {
-  background: #f0f8ff;
-  border-left-color: var(--secondary-color);
+  background: linear-gradient(135deg, #fff8f0, #ffffff);
+  border-left-color: #e67e22;
+  box-shadow: 0 4px 12px rgba(230, 126, 34, 0.15);
 }
 
 .notification-icon {
   font-size: 2.5rem;
   flex-shrink: 0;
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #fff8f0, #ffe8d6);
   border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(230, 126, 34, 0.15);
 }
 
 .notification-icon svg {
-  width: 24px;
-  height: 24px;
-  color: var(--secondary-color);
+  width: 28px;
+  height: 28px;
+  color: #e67e22;
 }
 
 .notification-content {
@@ -55,55 +59,57 @@
 }
 
 .notification-type {
-  padding: 4px 12px;
-  border-radius: 15px;
+  padding: 0.4rem 1rem;
+  border-radius: 50px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .notification-type.booking {
-  background: #e3f2fd;
-  color: #1976d2;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
 }
 
 .notification-type.review {
-  background: #fff3e0;
-  color: #f57c00;
+  background: linear-gradient(135deg, #e67e22, #d35400);
+  color: white;
 }
 
 .notification-type.payment {
-  background: #e8f5e9;
-  color: #388e3c;
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: white;
 }
 
 .notification-type.message {
-  background: #f3e5f5;
-  color: #7b1fa2;
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+  color: white;
 }
 
 .notification-type.system {
-  background: #eceff1;
-  color: #546e7a;
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  color: white;
 }
 
 .notification-type.negotiation {
-  background: #fff3cd;
-  color: #856404;
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: white;
 }
 
 .notification-time {
-  color: #8F8E91;
+  color: #7f8c8d;
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .notification-message {
-  color: var(--primary-color);
+  color: #1e3a5f;
   font-size: 1rem;
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
+  font-weight: 500;
 }
 
 /* Negotiation Quick Actions */
@@ -135,23 +141,25 @@
 }
 
 .btn-update-price {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #e67e22, #d35400);
   color: white;
+  box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
 }
 
 .btn-update-price:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(230, 126, 34, 0.4);
 }
 
 .btn-reject-nego {
-  background: #e74c3c;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: white;
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }
 
 .btn-reject-nego:hover:not(:disabled) {
-  background: #c0392b;
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
 }
 
 .btn-update-price:disabled,
@@ -162,41 +170,43 @@
 
 /* Price Update Form */
 .price-update-form {
-  margin-top: 12px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 2px solid #e9ecef;
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #f8f9fa, #ffffff);
+  border-radius: 12px;
+  border: 2px solid rgba(230, 126, 34, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .price-update-form label {
   display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #2c3e50;
-  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  font-size: 0.95rem;
 }
 
 .price-input-group {
   display: flex;
-  gap: 8px;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .price-input-group input {
   flex: 1;
   min-width: 120px;
-  padding: 10px 12px;
-  border: 2px solid #dee2e6;
-  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 50px;
   font-size: 1rem;
-  transition: border-color 0.3s ease;
+  transition: all 0.3s ease;
+  font-weight: 600;
 }
 
 .price-input-group input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #e67e22;
+  box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.1);
 }
 
 .btn-submit-price,
