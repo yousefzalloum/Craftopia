@@ -888,8 +888,11 @@
   transform: rotate(90deg);
 }
 
+
 .artisan-modal-body {
   padding: 30px;
+  max-height: 55vh;
+  overflow-y: auto;
 }
 
 .artisan-form-group {
@@ -1023,6 +1026,11 @@
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  background: white;
+  z-index: 2;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.03);
 }
 
 .artisan-modal-btn {

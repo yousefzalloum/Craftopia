@@ -29,18 +29,25 @@ const Signup = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
 
-  // List of locations in Jordan
+  // List of locations in Palestine
   const locations = [
-    'Amman',
-    'Zarqa',
-    'Irbid',
-    'Aqaba',
-    'Madaba',
-    'Salt',
-    'Jerash',
-    'Karak',
-    'Mafraq',
-    'Ajloun'
+    'Hebron',
+    'Ramallah',
+    'Nablus',
+    'Bethlehem',
+    'Jerusalem',
+    'Jenin',
+    'Tulkarm',
+    'Qalqilya',
+    'Salfit',
+    'Tubas',
+    'Jericho',
+    'Gaza City',
+    'Rafah',
+    'Khan Yunis',
+    'Deir al-Balah',
+    'Beit Lahia',
+    'Beit Hanoun'
   ];
 
   // Handle input changes

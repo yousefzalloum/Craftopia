@@ -1,30 +1,9 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { get } from '../utils/api';
 import Hero from '../components/Hero';
 import '../styles/Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
-  const [galleryFeed, setGalleryFeed] = useState([]);
-  const [galleryLoading, setGalleryLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchGalleryFeed = async () => {
-      try {
-        setGalleryLoading(true);
-        const data = await get('/portfolio/feed');
-        setGalleryFeed(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('❌ Failed to fetch gallery feed:', err);
-        setGalleryFeed([]);
-      } finally {
-        setGalleryLoading(false);
-      }
-    };
-
-    fetchGalleryFeed();
-  }, []);
 
   return (
     <div className="home">
@@ -58,99 +37,6 @@ const Home = () => {
               <p>Every artisan is verified and every piece is inspected for superior quality</p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Gallery Feed Section */}
-      <section className="home-gallery">
-        <div className="container">
-          <div className="gallery-header">
-            <h2>Featured Portfolio</h2>
-            <div className="header-divider"></div>
-            <p>Discover exceptional craftsmanship from our talented artisans</p>
-          </div>
-          
-          {galleryLoading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-            </div>
-          ) : galleryFeed.length > 0 ? (
-            <div className="gallery-grid">
-              {galleryFeed.map((item, index) => (
-                <div 
-                  key={index} 
-                  className="gallery-card"
-                  onClick={() => navigate(`/craftsman/${item.artisanId}`)}
-                  style={{
-                    cursor: 'pointer',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                    background: 'white'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-8px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                  }}
-                >
-                  <div style={{ position: 'relative', paddingBottom: '75%', overflow: 'hidden' }}>
-                    <img 
-                      src={
-                        item.imageUrl.startsWith('http') 
-                          ? item.imageUrl 
-                          : `http://localhost:5000${item.imageUrl}`
-                      }
-                      alt={`${item.artisanName}'s work`}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23999" font-family="sans-serif" font-size="18"%3EImage Not Found%3C/text%3E%3C/svg%3E';
-                      }}
-                    />
-                  </div>
-                  <div style={{ padding: '1rem' }}>
-                    <h3 style={{ 
-                      margin: '0 0 0.5rem 0', 
-                      fontSize: '1.1rem', 
-                      color: '#2c3e50',
-                      fontWeight: '600'
-                    }}>
-                      {item.artisanName}
-                    </h3>
-                    <p style={{ 
-                      margin: 0, 
-                      color: '#7f8c8d', 
-                      fontSize: '0.9rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <span style={{ fontSize: '1.2rem' }}>🛠️</span>
-                      {item.craftType}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-gallery">
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
-              <h3>No Portfolio Items Yet</h3>
-              <p>Check back soon for amazing artisan work!</p>
-            </div>
-          )}
         </div>
       </section>
 

@@ -214,9 +214,9 @@ export const logoutCustomer = () => {
  */
 export const createReservation = async (reservationData) => {
   try {
-    console.log('📡 Creating reservation with payload:', JSON.stringify(reservationData, null, 2));
-    const response = await post('/reservations', reservationData);
-    console.log('✅ Reservation created:', response);
+    console.log('📡 Creating order with payload:', JSON.stringify(reservationData, null, 2));
+    const response = await post('/orders', reservationData);
+    console.log('✅ Order created:', response);
     return response;
   } catch (error) {
     console.error('❌ Error creating reservation:', error);
@@ -251,8 +251,8 @@ export const createReservation = async (reservationData) => {
  */
 export const getCustomerReservations = async () => {
   try {
-    console.log('📡 Fetching customer orders from GET /orders/reservations/customer');
-    const response = await get('/orders/reservations/customer');
+    console.log('📡 Fetching customer orders from GET /orders/customer');
+    const response = await get('/orders/customer');
     console.log('✅ Customer orders fetched:', response);
     
     // Handle different response structures
@@ -279,9 +279,9 @@ export const getCustomerReservations = async () => {
  */
 export const cancelReservation = async (reservationId) => {
   try {
-    console.log('📡 Cancelling reservation:', reservationId);
-    const response = await post(`/reservations/${reservationId}/cancel`);
-    console.log('✅ Reservation cancelled:', response);
+    console.log('📡 Cancelling order:', reservationId);
+    const response = await post(`/orders/${reservationId}/cancel`);
+    console.log('✅ Order cancelled:', response);
     return response;
   } catch (error) {
     console.error('❌ Error cancelling reservation:', error);

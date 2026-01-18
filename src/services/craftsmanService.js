@@ -387,17 +387,8 @@ export const getAllCraftsmen = async (filters = {}) => {
     const { craftsmenData } = await import('../models/Craftsman');
     console.log('⚠️ Using dummy data fallback:', craftsmenData.length, 'artisans');
     
-    // Apply filters to dummy data
-    let filtered = craftsmenData;
-    if (filters.craftType) {
-      filtered = filtered.filter(c => c.profession === filters.craftType);
-    }
-    if (filters.location) {
-      filtered = filtered.filter(c => c.city === filters.location);
-    }
-    
-    // Convert dummy data to API format
-    return filtered.map(c => ({
+    // Convert dummy data to API format first
+    const converted = craftsmenData.map(c => ({
       _id: c.id.toString(),
       name: c.name,
       email: c.email,
@@ -412,6 +403,17 @@ export const getAllCraftsmen = async (filters = {}) => {
       availability: c.availability,
       availableTimes: c.availableTimes
     }));
+    
+    // Apply filters to converted data
+    let filtered = converted;
+    if (filters.craftType) {
+      filtered = filtered.filter(c => c.craftType === filters.craftType);
+    }
+    if (filters.location) {
+      filtered = filtered.filter(c => c.location === filters.location);
+    }
+    
+    return filtered;
   }
 };
 

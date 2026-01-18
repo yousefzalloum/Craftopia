@@ -29,9 +29,18 @@ const JobsPage = () => {
       setIsLoading(true);
       setError(null);
       
-      const data = await apiRequest('/orders/reservations/artisan', {
+      // Request with populate parameter to get customer details
+      const data = await apiRequest('/orders/artisan?populate=customer', {
         method: 'GET'
       });
+
+      console.log('📦 Jobs received:', data);
+      if (data && data.length > 0) {
+        console.log('📋 First job structure:', data[0]);
+        console.log('👤 Customer data:', data[0].customer);
+        console.log('📱 Customer fields:', Object.keys(data[0].customer || {}));
+        console.log('⚠️ Phone number field missing - backend needs to include phone_number when populating customer');
+      }
 
       setJobs(data || []);
     } catch (err) {
@@ -68,7 +77,7 @@ const JobsPage = () => {
   };
 
   const handleReject = (jobId) => {
-    handleStatusUpdate(jobId, 'rejected');
+    handleStatusUpdate(jobId, 'cancelled');
   };
 
   const handleComplete = (jobId) => {
@@ -287,7 +296,7 @@ const JobsPage = () => {
         if (searchQuery.trim()) {
           const query = searchQuery.toLowerCase();
           filteredJobs = filteredJobs.filter(job => {
-            const customerName = (job.customer?.name || '').toLowerCase();
+            const customerName = (job.customer?.name || job.customerId?.name || job.customerName || '').toLowerCase();
             const title = (job.projectTitle || job.title || '').toLowerCase();
             const note = (job.note || job.description || '').toLowerCase();
             
@@ -355,16 +364,18 @@ const JobsPage = () => {
                   <td className="customer-info">
                     <div style={{ minWidth: '150px' }}>
                       <div style={{ marginBottom: '0.25rem' }}>
-                        <strong style={{ color: '#2c3e50' }}>👤 {job.customer?.name || 'N/A'}</strong>
+                        <strong style={{ color: '#2c3e50' }}>
+                          👤 {job.customer?.name || job.customerId?.name || job.customerName || 'N/A'}
+                        </strong>
                       </div>
                       <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                        📧 {job.customer?.email || 'N/A'}
+                        📧 {job.customer?.email || job.customerId?.email || job.customerEmail || 'N/A'}
                       </div>
-                      {job.customer?.phone_number && (
+                      {(job.customer?.phone_number || job.customer?.phone || job.customer?.phoneNumber || job.customer?.Phone_number) ? (
                         <div style={{ color: '#27ae60', fontSize: '0.85rem', fontWeight: '500' }}>
-                          📱 {job.customer.phone_number}
+                          📱 {job.customer.phone_number || job.customer.phone || job.customer.phoneNumber || job.customer.Phone_number}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </td>
                   <td className="job-description">
@@ -401,7 +412,28 @@ const JobsPage = () => {
                   <td className="job-actions">
                     {job.status === 'pending' ? (
                       <div className="action-buttons">
-                        {job.type === 'custom_request' && (!job.totalPrice || job.totalPrice === 0) ? (
+                        {/* Show "Update Price" button if customer has negotiated (note contains [Customer Feedback]:) */}
+                        {job.note && job.note.includes('[Customer Feedback]:') ? (
+                          <button
+                            className="btn-set-price"
+                            onClick={() => handleSetPrice(job)}
+                            disabled={processingJobId === job._id}
+                            style={{
+                              background: '#e67e22',
+                              color: 'white',
+                              padding: '0.5rem 1rem',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem',
+                              fontWeight: 'bold',
+                              marginBottom: '0.5rem',
+                              width: '100%'
+                            }}
+                          >
+                            {processingJobId === job._id ? '⏳' : '💬'} Counter Offer
+                          </button>
+                        ) : job.type === 'custom_request' && (!job.totalPrice || job.totalPrice === 0) ? (
                           <button
                             className="btn-set-price"
                             onClick={() => handleSetPrice(job)}

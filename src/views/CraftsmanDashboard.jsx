@@ -95,7 +95,7 @@ const CraftsmanDashboard = () => {
       setIsLoadingJobs(true);
       setJobsError(null);
       
-      const data = await apiRequest('/orders/reservations/artisan', {
+      const data = await apiRequest('/orders/artisan?populate=customer', {
         method: 'GET'
       });
 

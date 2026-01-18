@@ -81,10 +81,10 @@ const notificationService = {
     }
   },
 
-  // Update price for a reservation (artisan response to negotiation)
-  updateNegotiationPrice: async (reservationId, newPrice) => {
+  // Update price for an order (artisan response to negotiation)
+  updateNegotiationPrice: async (orderId, newPrice) => {
     try {
-      const data = await put(`/reservations/${reservationId}/update-price`, {
+      const data = await put(`/orders/${orderId}/update-price`, {
         agreed_price: newPrice
       });
       console.log('✅ Price updated successfully');
@@ -96,10 +96,10 @@ const notificationService = {
   },
 
   // Reject negotiation (artisan rejects customer's price request)
-  rejectNegotiation: async (reservationId) => {
+  rejectNegotiation: async (orderId) => {
     try {
-      console.log('📡 Rejecting negotiation for reservation:', reservationId);
-      const data = await put(`/reservations/${reservationId}/reject-negotiation`, {});
+      console.log('📡 Rejecting negotiation for order:', orderId);
+      const data = await put(`/orders/${orderId}/reject-negotiation`, {});
       console.log('✅ Negotiation rejected successfully');
       return data;
     } catch (error) {

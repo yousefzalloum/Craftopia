@@ -493,10 +493,10 @@ const ArtisanDetailsPage = () => {
             <div className="profile-image-container">
               <img 
                 src={
-                  artisan.profilePicture 
-                    ? (artisan.profilePicture.startsWith('http') 
-                        ? artisan.profilePicture 
-                        : `http://localhost:5000${artisan.profilePicture}`)
+                  (artisan.avatar || artisan.profilePicture)
+                    ? ((artisan.avatar || artisan.profilePicture).startsWith('http') 
+                        ? (artisan.avatar || artisan.profilePicture)
+                        : `http://localhost:5000${artisan.avatar || artisan.profilePicture}`)
                     : `https://ui-avatars.com/api/?name=${encodeURIComponent(artisan.name)}&background=e67e22&color=fff&size=200`
                 }
                 alt={artisan.name}

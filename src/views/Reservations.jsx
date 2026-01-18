@@ -168,10 +168,10 @@ const Reservations = () => {
         replyData.note = negotiationNote.trim();
       }
 
-      console.log('📤 Sending reply to:', `/reservations/${selectedReservation._id}/reply`);
+      console.log('📤 Sending reply to:', `/orders/${selectedReservation._id}/reply`);
       console.log('📦 Reply data:', replyData);
 
-      await put(`/reservations/${selectedReservation._id}/reply`, replyData);
+      await put(`/orders/${selectedReservation._id}/reply`, replyData);
 
       alert(`Price ${replyType === 'accept' ? 'accepted' : replyType === 'reject' ? 'rejected' : 'negotiation sent'} successfully!`);
       

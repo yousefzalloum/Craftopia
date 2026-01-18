@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CraftCard from '../components/CraftCard';
 import SearchBar from '../components/SearchBar';
@@ -10,10 +10,11 @@ import '../styles/Crafts.css';
 const Crafts = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [artisansRaw, setArtisansRaw] = useState([]); // store all fetched artisans
   const [selectedCraftType, setSelectedCraftType] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedRating, setSelectedRating] = useState('');
-  const [artisans, setArtisans] = useState([]);
+  // const [artisans, setArtisans] = useState([]); // REMOVE this line, replaced by artisansRaw and useMemo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -21,47 +22,26 @@ const Crafts = () => {
   const craftTypes = ['Carpentry', 'Plumbing', 'Electrical', 'Painting', 'Welding', 'Masonry'];
   const locations = ['Hebron', 'Ramallah', 'Nablus', 'Bethlehem', 'Jerusalem', 'Jenin'];
 
+  // Fetch artisans from API only when filters change
   useEffect(() => {
-    // Fetch artisans from API with filters
     const fetchArtisans = async () => {
       try {
         setLoading(true);
         setError(null);
-        console.log('🔍 Fetching artisans with filters:', { 
-          craftType: selectedCraftType, 
-          location: selectedLocation,
-          rating: selectedRating
-        });
-        
-        // Build filter object
         const filters = {};
         if (selectedCraftType) filters.craftType = selectedCraftType;
         if (selectedLocation) filters.location = selectedLocation;
-        
         const data = await getAllCraftsmen(filters);
-        console.log('✅ Artisans fetched:', data.length);
-        
-        // Filter by search query, rating, and availability locally
-        let result = data;
-        
-        // Search filter
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          result = result.filter(artisan => 
-            artisan.name.toLowerCase().includes(query) ||
-            artisan.description?.toLowerCase().includes(query) ||
-            artisan.craftType.toLowerCase().includes(query) ||
-            artisan.location.toLowerCase().includes(query)
-          );
-        }
-        
-        // Rating filter
+        // Rating filter (server doesn't support, so do it here)
+        let filtered = data;
         if (selectedRating) {
           const minRating = parseFloat(selectedRating);
-          result = result.filter(artisan => artisan.averageRating >= minRating);
+          filtered = filtered.filter(artisan => {
+            const rating = artisan.averageRating ?? artisan.rating ?? 0;
+            return rating >= minRating;
+          });
         }
-        
-        setArtisans(result);
+        setArtisansRaw(filtered);
       } catch (err) {
         console.error('❌ Failed to fetch artisans:', err);
         setError(err.message || 'Failed to load artisans');
@@ -69,9 +49,20 @@ const Crafts = () => {
         setLoading(false);
       }
     };
-
     fetchArtisans();
-  }, [selectedCraftType, selectedLocation, searchQuery, selectedRating]);
+  }, [selectedCraftType, selectedLocation, selectedRating]);
+
+  // Client-side search only (no API call)
+  const artisans = useMemo(() => {
+    if (!searchQuery) return artisansRaw;
+    const query = searchQuery.toLowerCase();
+    return artisansRaw.filter(artisan =>
+      artisan.name?.toLowerCase().includes(query) ||
+      artisan.description?.toLowerCase().includes(query) ||
+      artisan.craftType?.toLowerCase().includes(query) ||
+      artisan.location?.toLowerCase().includes(query)
+    );
+  }, [searchQuery, artisansRaw]);
 
   if (loading) {
     return <Loading />;
@@ -230,7 +221,7 @@ const Crafts = () => {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
                         </svg>
-                        {artisan.averageRating ? artisan.averageRating.toFixed(1) : '0.0'}
+                        {(artisan.averageRating ?? artisan.rating ?? 0).toFixed(1)}
                       </span>
                     </div>
                   </div>

@@ -157,11 +157,13 @@ export const del = (endpoint, data = null, options = {}) => {
 
 /**
  * Create a new reservation (Order or Custom Request)
+ * @deprecated Use post('/orders', orderData) instead - /reservations endpoint removed
  * @param {Object} reservationData - Reservation details
  * @returns {Promise<Object>} Created reservation
  */
 export const createReservation = async (reservationData) => {
-  return post('/reservations', reservationData);
+  console.warn('⚠️ createReservation is deprecated, using /orders endpoint instead');
+  return post('/orders', reservationData);
 };
 
 /**
