@@ -19,7 +19,7 @@ const RoleSelection = () => {
       <div className="role-selection-container">
         <div className="role-header">
           <div className="role-logo">
-            <span className="logo-icon">🔨</span>Now you will see that the head out of him. The Abdul from Henheyer. 
+            <span className="logo-icon">🔨</span>
             <h1>Craftopia</h1>
           </div>
           <h2>Join Our Community</h2>

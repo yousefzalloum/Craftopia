@@ -39,6 +39,13 @@ const Reservations = () => {
   
   // Expanded descriptions state
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
+  
+  // Success message state
+  const [successMessage, setSuccessMessage] = useState(null);
+  
+  // Confirmation modal state
+  const [confirmCancelModal, setConfirmCancelModal] = useState(false);
+  const [reservationToCancel, setReservationToCancel] = useState(null);
 
   useEffect(() => {
     // Check authentication
@@ -254,25 +261,31 @@ const Reservations = () => {
   };
 
   const handleCancelReservation = async (reservationId) => {
-    if (!window.confirm('Are you sure you want to cancel this reservation?')) {
-      return;
-    }
+    setReservationToCancel(reservationId);
+    setConfirmCancelModal(true);
+  };
+
+  const confirmCancelReservation = async () => {
+    if (!reservationToCancel) return;
 
     try {
-      setCancellingId(reservationId);
-      await cancelReservation(reservationId);
+      setCancellingId(reservationToCancel);
+      setConfirmCancelModal(false);
+      await cancelReservation(reservationToCancel);
       
       // Refresh reservations list
       const data = await getCustomerReservations();
       // Show all reservations including "New" (pending) ones
       setReservations(data || []);
       
-      alert('Reservation cancelled successfully');
+      setSuccessMessage('Reservation cancelled successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       console.error('Failed to cancel reservation:', err);
       alert(err.message || 'Failed to cancel reservation');
     } finally {
       setCancellingId(null);
+      setReservationToCancel(null);
     }
   };
 
@@ -281,7 +294,7 @@ const Reservations = () => {
       'pending': 'Pending Approval',
       'offer_received': 'Price Offer Received',
       'accepted': 'Accepted',
-      'rejected': 'Rejected',
+      'rejected': 'Cancelled',
       'completed': 'Completed',
       'cancelled': 'Cancelled',
       'in_progress': 'In Progress',
@@ -362,14 +375,16 @@ const Reservations = () => {
 
   const filteredReservations = filterStatus === 'all' 
     ? reservations 
-    : reservations.filter(res => res.status === filterStatus);
+    : filterStatus === 'rejected' 
+      ? reservations.filter(res => res.status === 'rejected' || res.status === 'cancelled')
+      : reservations.filter(res => res.status === filterStatus);
 
   return (
     <div className="reservations-page">
       <div className="container">
         <div className="page-header">
-          <h1 className="page-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '32px', height: '32px', verticalAlign: 'middle', marginRight: '12px'}}>
+          <h1 className="page-title" style={{color: '#1e3a5f'}}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '32px', height: '32px', verticalAlign: 'middle', marginRight: '12px', color: '#1e3a5f'}}>
               <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
             </svg>
             My Reservations
@@ -411,7 +426,7 @@ const Reservations = () => {
                 className={`filter-btn ${filterStatus === 'rejected' ? 'active' : ''}`}
                 onClick={() => setFilterStatus('rejected')}
               >
-                Rejected ({reservations.filter(r => r.status === 'rejected').length})
+                Cancelled ({reservations.filter(r => r.status === 'rejected' || r.status === 'cancelled').length})
               </button>
               <button 
                 className={`filter-btn ${filterStatus === 'completed' ? 'active' : ''}`}
@@ -747,7 +762,7 @@ const Reservations = () => {
                         Respond to Price (${reservation.agreed_price})
                       </button>
                     )}
-                    {reservation.status === 'New' && (
+                    {(reservation.status === 'New' || reservation.status === 'pending') && (
                       <button
                         onClick={() => handleCancelReservation(reservation._id)}
                         disabled={cancellingId === reservation._id}
@@ -1334,6 +1349,158 @@ const Reservations = () => {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+        
+        {/* Confirmation Modal for Cancel */}
+        {confirmCancelModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            animation: 'fadeIn 0.3s ease-out'
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+              borderRadius: '20px',
+              padding: '0',
+              maxWidth: '450px',
+              width: '90%',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              animation: 'slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              overflow: 'hidden',
+              border: '2px solid rgba(231, 76, 60, 0.2)'
+            }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                padding: '30px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <span style={{
+                  fontSize: '64px',
+                  filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2))'
+                }}>⚠️</span>
+              </div>
+              <div style={{
+                padding: '35px 40px',
+                textAlign: 'center'
+              }}>
+                <h3 style={{
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: '#2c3e50',
+                  margin: '0 0 15px 0',
+                  letterSpacing: '-0.5px'
+                }}>Cancel Reservation?</h3>
+                <p style={{
+                  fontSize: '16px',
+                  color: '#5a6c7d',
+                  lineHeight: '1.6',
+                  margin: '0'
+                }}>Are you sure you want to cancel this reservation? This action cannot be undone.</p>
+              </div>
+              <div style={{
+                padding: '0 40px 35px 40px',
+                display: 'flex',
+                gap: '1rem',
+                justifyContent: 'center'
+              }}>
+                <button
+                  onClick={() => {
+                    setConfirmCancelModal(false);
+                    setReservationToCancel(null);
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '14px 30px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 4px 15px rgba(149, 165, 166, 0.3)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    flex: 1
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 6px 20px rgba(149, 165, 166, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 4px 15px rgba(149, 165, 166, 0.3)';
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmCancelReservation}
+                  style={{
+                    background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '14px 30px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 4px 15px rgba(231, 76, 60, 0.3)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    flex: 1
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 6px 20px rgba(231, 76, 60, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 4px 15px rgba(231, 76, 60, 0.3)';
+                  }}
+                >
+                  Yes, Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Success Message Toast */}
+        {successMessage && (
+          <div style={{
+            position: 'fixed',
+            top: '100px',
+            right: '20px',
+            background: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)',
+            color: 'white',
+            padding: '1.25rem 2rem',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(39, 174, 96, 0.4)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            animation: 'slideInRight 0.4s ease-out',
+            maxWidth: '400px'
+          }}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width: '28px', height: '28px', flexShrink: 0}}>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            <span style={{fontSize: '1.05rem', fontWeight: '600'}}>{successMessage}</span>
           </div>
         )}
       </div>

@@ -280,7 +280,7 @@ export const getCustomerReservations = async () => {
 export const cancelReservation = async (reservationId) => {
   try {
     console.log('📡 Cancelling order:', reservationId);
-    const response = await post(`/orders/${reservationId}/cancel`);
+    const response = await put(`/orders/${reservationId}/cancel`, {});
     console.log('✅ Order cancelled:', response);
     return response;
   } catch (error) {

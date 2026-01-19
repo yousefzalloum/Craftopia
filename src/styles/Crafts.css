@@ -33,7 +33,12 @@
 }
 
 .crafts-header .page-title {
-  color: var(--white);
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-clip: unset !important;
+  text-shadow: none !important;
 }
 
 .crafts-header .page-subtitle {

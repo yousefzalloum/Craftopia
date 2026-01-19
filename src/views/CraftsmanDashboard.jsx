@@ -39,7 +39,6 @@ const CraftsmanDashboard = () => {
     // Check if user is logged in as artisan
     if (!isLoggedIn || role !== 'artisan') {
       console.log('❌ Not logged in as artisan. isLoggedIn:', isLoggedIn, 'role:', role);
-      alert('Please login as an artisan to access this page');
       navigate('/login');
       return;
     }

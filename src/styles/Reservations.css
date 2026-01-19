@@ -4,6 +4,37 @@
   to { transform: rotate(360deg); }
 }
 
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .reservations-page {
   padding: 2rem 0;
   min-height: calc(100vh - 80px);
@@ -21,12 +52,21 @@
 
 .page-title {
   margin: 0 0 0.75rem;
-  color: #2c3e50;
+  color: #1e3a5f !important;
   font-size: 2rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #1e3a5f !important;
+  background-clip: unset !important;
+  text-shadow: none !important;
+}
+
+.page-title svg {
+  fill: #1e3a5f !important;
 }
 
 .page-subtitle {

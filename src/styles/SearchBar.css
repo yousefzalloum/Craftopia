@@ -9,7 +9,7 @@
 
 .search-icon {
   position: absolute;
-  left: 3rem;
+  left: 1.5rem;
   top: 50%;
   transform: translateY(-50%);
   color: #7f8c8d;
@@ -21,8 +21,7 @@
 
 .search-input {
   width: 100%;
-  padding: 1.25rem 3.5rem 1.25rem 4rem;
-  padding-left: 4rem;
+  padding: 1.25rem 3.5rem 1.25rem 4.5rem;
   border: 2px solid rgba(30, 58, 95, 0.15);
   border-radius: 50px;
   font-size: 1.05rem;

@@ -137,7 +137,7 @@ const Crafts = () => {
     <div className="crafts-page">
       <div className="crafts-header">
         <div className="container">
-          <h1 className="page-title">Browse Artisans</h1>
+          <h1 className="page-title" style={{color: '#ffffff'}}>Browse Artisans</h1>
           <p className="page-subtitle">
             Discover talented artisans for your home and industrial needs
           </p>

@@ -13,6 +13,7 @@ const SearchBar = ({ value, onChange, placeholder = "Search crafts..." }) => {
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        style={{paddingLeft: '3.5rem'}}
       />
       {value && (
         <button 

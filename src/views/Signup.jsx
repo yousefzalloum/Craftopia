@@ -184,7 +184,7 @@ const Signup = () => {
         if (role === 'artisan') {
           navigate('/craftsman-dashboard');
         } else {
-          navigate('/');
+          navigate('/login');
         }
       }, 1000);
 
