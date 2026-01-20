@@ -37,6 +37,19 @@ const Profile = () => {
     confirmPassword: ''
   });
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isEditModalOpen || isPasswordModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isEditModalOpen, isPasswordModalOpen]);
+
   useEffect(() => {
     // Check authentication
     if (!isLoggedIn) {
