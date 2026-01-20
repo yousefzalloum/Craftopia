@@ -225,22 +225,23 @@ export const deleteReview = async (reviewId) => {
 };
 
 /**
- * Delete a portfolio image
+ * Delete a portfolio image/project
  * @param {string} artisanId - Artisan ID
- * @param {string} imageUrl - Image URL to delete
+ * @param {string} projectId - Project ID to delete
  * @returns {Promise<Object>} Delete confirmation
  */
-export const deletePortfolioImage = async (artisanId, imageUrl) => {
+export const deletePortfolioImage = async (artisanId, projectId) => {
   try {
-    console.log('🗑️ Deleting portfolio image for artisan:', artisanId);
-    const response = await del('/admin/portfolio', {
+    console.log('🗑️ Deleting portfolio project for artisan:', artisanId);
+    console.log('🗑️ Project ID:', projectId);
+    const response = await del('/admin/project', {
       artisanId,
-      imageUrl
+      projectId
     });
-    console.log('✅ Portfolio image deleted successfully:', response);
+    console.log('✅ Portfolio project deleted successfully:', response);
     return response;
   } catch (error) {
-    console.error('❌ Failed to delete portfolio image:', error.message);
+    console.error('❌ Failed to delete portfolio project:', error.message);
     throw new Error(parseApiError(error));
   }
 };

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ReservationController } from '../controllers/ReservationController';
-import { getAllArtisans } from '../services/craftsmanService';
+import { getAllArtisans, getArtisanAvailability } from '../services/craftsmanService';
+import { isDateAvailable, getAvailableDaysText, validateDateSelection } from '../utils/dateUtils';
 import '../styles/BookMaintenance.css';
 
 const BookMaintenance = () => {
@@ -10,6 +11,8 @@ const BookMaintenance = () => {
   const { isLoggedIn, user, userId } = useAuth();
   const [artisans, setArtisans] = useState([]);
   const [artisansLoading, setArtisansLoading] = useState(true);
+  const [availability, setAvailability] = useState([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -53,6 +56,38 @@ const BookMaintenance = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Fetch availability when craftsman is selected
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!formData.craftsmanId) {
+        setAvailability([]);
+        return;
+      }
+      
+      try {
+        setAvailabilityLoading(true);
+        console.log('📅 Fetching availability for artisan:', formData.craftsmanId);
+        const data = await getArtisanAvailability(formData.craftsmanId);
+        console.log('✅ Availability fetched:', data);
+        
+        if (Array.isArray(data)) {
+          setAvailability(data);
+          // Reset appointment date when availability changes
+          setFormData(prev => ({ ...prev, appointmentDate: '' }));
+        } else {
+          setAvailability([]);
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch availability:', err);
+        setAvailability([]);
+      } finally {
+        setAvailabilityLoading(false);
+      }
+    };
+
+    fetchAvailability();
+  }, [formData.craftsmanId]);
+
   // Get unique professions from artisans
   const professions = [...new Set(artisans.map(a => a.craftType).filter(Boolean))];
 
@@ -92,6 +127,13 @@ const BookMaintenance = () => {
     // Validate all fields
     if (!formData.craftsmanId || !formData.serviceDescription || !formData.serviceAddress || !formData.appointmentDate || !formData.appointmentTime) {
       setMessage('Please fill in all fields');
+      return;
+    }
+
+    // Validate date availability
+    const dateValidation = validateDateSelection(formData.appointmentDate, availability);
+    if (!dateValidation.valid) {
+      setMessage(dateValidation.message);
       return;
     }
 
@@ -271,10 +313,33 @@ const BookMaintenance = () => {
                   id="appointmentDate"
                   name="appointmentDate"
                   value={formData.appointmentDate}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const selectedDate = e.target.value;
+                    if (selectedDate && availability.length > 0) {
+                      // Validate the selected date
+                      const validation = validateDateSelection(selectedDate, availability);
+                      if (!validation.valid) {
+                        setMessage(`⚠️ ${validation.message}`);
+                        return;
+                      }
+                    }
+                    handleChange(e);
+                    setMessage(''); // Clear any previous error
+                  }}
                   min={new Date().toISOString().split('T')[0]}
+                  disabled={!formData.craftsmanId || availabilityLoading}
                   required
                 />
+                {formData.craftsmanId && availability.length > 0 && (
+                  <small style={{ color: '#27ae60', marginTop: '0.25rem', display: 'block' }}>
+                    Available days: {getAvailableDaysText(availability)}
+                  </small>
+                )}
+                {availabilityLoading && (
+                  <small style={{ color: '#3498db', marginTop: '0.25rem', display: 'block' }}>
+                    Loading availability...
+                  </small>
+                )}
               </div>
 
               <div className="form-group">

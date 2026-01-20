@@ -124,8 +124,10 @@
 
 .mission-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-lg);
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xl);
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 .mission-card {

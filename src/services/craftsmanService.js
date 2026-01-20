@@ -317,27 +317,18 @@ export const deletePortfolioImage = async (projectId) => {
  */
 export const getCraftsmanProfile = async (craftsmanId) => {
   try {
-    // First try the direct endpoint
-    const response = await get(`/artisans/${craftsmanId}`);
-    return response;
-  } catch (error) {
-    // If 404, fallback to fetching all artisans and filtering
-    if (error.status === 404) {
-      console.log('⚠️ Direct endpoint not found, trying to fetch from all artisans...');
-      try {
-        const allArtisans = await get('/artisans');
-        const artisan = allArtisans.find(a => a._id === craftsmanId);
-        if (artisan) {
-          console.log('✅ Found artisan in all artisans list');
-          return artisan;
-        }
-        // If still not found, throw original 404
-        throw error;
-      } catch (fallbackError) {
-        console.error('❌ Fallback also failed:', fallbackError);
-        throw error; // Throw original 404 error
-      }
+    // Fetch all artisans and find the specific one
+    // Note: Backend doesn't have a direct /artisans/:id endpoint
+    const allArtisans = await get('/artisans');
+    const artisan = allArtisans.find(a => a._id === craftsmanId);
+    
+    if (artisan) {
+      return artisan;
     }
+    
+    // If not found, throw 404 error
+    throw new Error('Artisan not found');
+  } catch (error) {
     // Preserve the original error with status if it's an ApiError
     if (error.status) {
       throw error;

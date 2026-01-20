@@ -6,6 +6,7 @@ import { deletePortfolioImage } from '../services/adminService';
 import { createReservation } from '../services/customerService';
 import { ReservationController } from '../controllers/ReservationController';
 import { get } from '../utils/api';
+import { isDateAvailable, getAvailableDaysText, validateDateSelection } from '../utils/dateUtils';
 import Loading from '../components/Loading';
 import '../styles/ArtisanDetailsPage.css';
 
@@ -246,10 +247,23 @@ const ArtisanDetailsPage = () => {
       await deletePortfolioImage(id, imageUrl);
       
       // Update local state to remove the image
-      setArtisan(prev => ({
-        ...prev,
-        portfolioImages: prev.portfolioImages.filter(img => img !== imageUrl)
-      }));
+      setArtisan(prev => {
+        // Handle both portfolio and portfolioImages field names
+        const portfolioField = prev.portfolio || prev.portfolioImages || [];
+        const updatedPortfolio = portfolioField.filter(item => {
+          // Handle both string URLs and project objects
+          if (typeof item === 'string') {
+            return item !== imageUrl;
+          }
+          return item._id !== imageUrl;
+        });
+        
+        return {
+          ...prev,
+          portfolio: updatedPortfolio,
+          portfolioImages: updatedPortfolio
+        };
+      });
       
       alert('Portfolio image deleted successfully!');
     } catch (err) {
@@ -329,6 +343,14 @@ const ArtisanDetailsPage = () => {
       
       if (!bookingData.deliveryDate) {
         setBookingError('Please select a delivery date');
+        setBookingLoading(false);
+        return;
+      }
+      
+      // Validate date availability
+      const dateValidation = validateDateSelection(bookingData.deliveryDate, availability);
+      if (!dateValidation.valid) {
+        setBookingError(dateValidation.message);
         setBookingLoading(false);
         return;
       }
@@ -424,6 +446,13 @@ const ArtisanDetailsPage = () => {
     
     if (!orderDeliveryDate) {
       setOrderError('Please select a delivery date');
+      return;
+    }
+    
+    // Validate date availability
+    const dateValidation = validateDateSelection(orderDeliveryDate, availability);
+    if (!dateValidation.valid) {
+      setOrderError(dateValidation.message);
       return;
     }
     
@@ -897,29 +926,6 @@ const ArtisanDetailsPage = () => {
             </div>
           )}
         </div>
-
-        {/* Profile Details */}
-        <div className="profile-section">
-          <h2>ℹ️ Profile Details</h2>
-          <div className="profile-details-grid">
-            <div className="detail-card">
-              <strong>Profile ID</strong>
-              <span className="detail-value">{artisan._id}</span>
-            </div>
-            <div className="detail-card">
-              <strong>Created At</strong>
-              <span className="detail-value">{formatDate(artisan.createdAt)}</span>
-            </div>
-            <div className="detail-card">
-              <strong>Last Updated</strong>
-              <span className="detail-value">{formatDate(artisan.updatedAt)}</span>
-            </div>
-            <div className="detail-card">
-              <strong>Average Rating</strong>
-              <span className="detail-value">⭐ {calculatedRating > 0 ? calculatedRating.toFixed(1) : (artisan.averageRating ? artisan.averageRating.toFixed(1) : '0.0')}</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Gallery Modal */}
@@ -1288,10 +1294,21 @@ const ArtisanDetailsPage = () => {
                   type="date"
                   id="bookingDeliveryDate"
                   value={bookingData.deliveryDate}
-                  onChange={(e) => setBookingData({ ...bookingData, deliveryDate: e.target.value })}
+                  onChange={(e) => {
+                    const selectedDate = e.target.value;
+                    if (selectedDate && availability.length > 0) {
+                      const validation = validateDateSelection(selectedDate, availability);
+                      if (!validation.valid) {
+                        setBookingError(validation.message);
+                        return;
+                      }
+                    }
+                    setBookingData({ ...bookingData, deliveryDate: selectedDate });
+                    setBookingError(null);
+                  }}
                   min={new Date().toISOString().split('T')[0]}
                   required
-                  disabled={bookingLoading || bookingSuccess}
+                  disabled={bookingLoading || bookingSuccess || availabilityLoading}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -1300,6 +1317,16 @@ const ArtisanDetailsPage = () => {
                     fontSize: '1rem'
                   }}
                 />
+                {availability.length > 0 && (
+                  <small style={{ color: '#27ae60', marginTop: '0.25rem', display: 'block' }}>
+                    Available days: {getAvailableDaysText(availability)}
+                  </small>
+                )}
+                {availabilityLoading && (
+                  <small style={{ color: '#3498db', marginTop: '0.25rem', display: 'block' }}>
+                    Loading availability...
+                  </small>
+                )}
               </div>
               
               <div style={{ 
@@ -1441,9 +1468,20 @@ const ArtisanDetailsPage = () => {
                   type="date"
                   id="orderDeliveryDate"
                   value={orderDeliveryDate}
-                  onChange={(e) => setOrderDeliveryDate(e.target.value)}
+                  onChange={(e) => {
+                    const selectedDate = e.target.value;
+                    if (selectedDate && availability.length > 0) {
+                      const validation = validateDateSelection(selectedDate, availability);
+                      if (!validation.valid) {
+                        setOrderError(validation.message);
+                        return;
+                      }
+                    }
+                    setOrderDeliveryDate(selectedDate);
+                    setOrderError(null);
+                  }}
                   min={new Date().toISOString().split('T')[0]}
-                  disabled={orderLoading}
+                  disabled={orderLoading || availabilityLoading}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -1452,6 +1490,16 @@ const ArtisanDetailsPage = () => {
                     fontSize: '1rem'
                   }}
                 />
+                {availability.length > 0 && (
+                  <small style={{ color: '#27ae60', marginTop: '0.25rem', display: 'block' }}>
+                    Available days: {getAvailableDaysText(availability)}
+                  </small>
+                )}
+                {availabilityLoading && (
+                  <small style={{ color: '#3498db', marginTop: '0.25rem', display: 'block' }}>
+                    Loading availability...
+                  </small>
+                )}
               </div>
               
               <div className="form-group" style={{ marginBottom: '1rem' }}>

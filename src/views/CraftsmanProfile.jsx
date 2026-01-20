@@ -665,7 +665,7 @@ const CraftsmanProfile = () => {
         </div>
 
         {/* About Section */}
-        <div className="profile-section-enhanced">
+        <div className="profile-section-enhanced" style={{ marginTop: '40px' }}>
           <div className="section-header-enhanced">
             <span className="section-icon">💬</span>
             <h2>About Me</h2>

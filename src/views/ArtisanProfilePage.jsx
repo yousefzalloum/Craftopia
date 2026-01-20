@@ -642,7 +642,7 @@ const ArtisanProfilePage = () => {
 
         {/* About Section */}
         {profileData.description && (
-          <div className="artisan-section-card">
+          <div className="artisan-section-card" style={{ marginTop: '40px' }}>
             <div className="artisan-section-header">
               <div className="header-left">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
