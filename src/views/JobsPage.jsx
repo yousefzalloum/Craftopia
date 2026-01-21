@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../utils/api';
 import Loading from '../components/Loading';
+import Toast from '../components/Toast';
 import '../styles/JobsPage.css';
 
 /**
@@ -21,6 +22,7 @@ const JobsPage = () => {
   const [proposedPrice, setProposedPrice] = useState('');
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [jobToComplete, setJobToComplete] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetchIncomingJobs();
@@ -108,13 +110,13 @@ const JobsPage = () => {
 
   const handleSubmitPrice = async () => {
     if (!selectedJob || !proposedPrice) {
-      alert('Please enter a valid price');
+      setToast({ message: 'Please enter a valid price', type: 'error' });
       return;
     }
 
     const price = parseFloat(proposedPrice);
     if (isNaN(price) || price <= 0) {
-      alert('Please enter a valid price greater than 0');
+      setToast({ message: 'Please enter a valid price greater than 0', type: 'error' });
       return;
     }
 
@@ -137,7 +139,7 @@ const JobsPage = () => {
       });
       
       console.log(`✅ Price $${price} set successfully for order ${orderId}`);
-      alert(`Price $${price} proposed successfully! Customer will be notified.`);
+      setToast({ message: `Price $${price} proposed successfully! Customer will be notified.`, type: 'success' });
       
       setPriceModalOpen(false);
       setSelectedJob(null);
@@ -152,7 +154,7 @@ const JobsPage = () => {
         status: err.status,
         data: err.data
       });
-      alert(`Failed to propose price: ${err.message}`);
+      setToast({ message: `Failed to propose price: ${err.message}`, type: 'error' });
     } finally {
       setProcessingJobId(null);
     }
@@ -761,6 +763,15 @@ const JobsPage = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

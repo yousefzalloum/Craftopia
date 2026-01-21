@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import NotificationController from '../controllers/NotificationController.jsx';
 import '../styles/NotificationCard.css';
 
-const NotificationCard = ({ notification, onMarkAsRead, onDelete, onRefresh, onPriceUpdate, onReject }) => {
+const NotificationCard = ({ notification, onMarkAsRead, onDelete, onRefresh, onPriceUpdate, onReject, showToast }) => {
   const [showPriceForm, setShowPriceForm] = useState(false);
   const [newPrice, setNewPrice] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -28,7 +28,7 @@ const NotificationCard = ({ notification, onMarkAsRead, onDelete, onRefresh, onP
   const handleUpdatePrice = async (e) => {
     e.stopPropagation();
     if (!newPrice || parseFloat(newPrice) <= 0) {
-      alert('Please enter a valid price');
+      if (showToast) showToast({ message: 'Please enter a valid price', type: 'error' });
       return;
     }
     
@@ -40,7 +40,7 @@ const NotificationCard = ({ notification, onMarkAsRead, onDelete, onRefresh, onP
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error('Error updating price:', error);
-      alert('Failed to update price');
+      if (showToast) showToast({ message: 'Failed to update price', type: 'error' });
     } finally {
       setUpdating(false);
     }

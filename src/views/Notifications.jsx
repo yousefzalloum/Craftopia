@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import NotificationController from '../controllers/NotificationController.jsx';
 import NotificationCard from '../components/NotificationCard';
 import Loading from '../components/Loading';
+import Toast from '../components/Toast';
 import '../styles/Notifications.css';
 
 const Notifications = () => {
@@ -12,6 +13,7 @@ const Notifications = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // all, unread, read
   const [groupedNotifications, setGroupedNotifications] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetchNotifications();
@@ -77,7 +79,7 @@ const Notifications = () => {
       console.log('✅ Notification deleted successfully');
     } catch (error) {
       console.error('❌ Failed to delete notification:', error);
-      alert('Failed to delete notification. Please try again.');
+      setToast({ message: 'Failed to delete notification. Please try again.', type: 'error' });
       // Refresh to get current state
       fetchNotifications();
     }
@@ -87,7 +89,7 @@ const Notifications = () => {
     try {
       console.log('💰 Updating price for reservation:', reservationId, 'to:', newPrice);
       await NotificationController.updateNegotiationPrice(reservationId, newPrice);
-      alert('Price updated successfully! Customer has been notified.');
+      setToast({ message: 'Price updated successfully! Customer has been notified.', type: 'success' });
       // Refresh notifications
       setTimeout(() => fetchNotifications(), 500);
     } catch (error) {
@@ -237,6 +239,7 @@ const Notifications = () => {
                         onRefresh={fetchNotifications}
                         onPriceUpdate={handlePriceUpdate}
                         onReject={handleRejectNegotiation}
+                        showToast={setToast}
                       />
                     ))}
                   </div>
@@ -254,6 +257,7 @@ const Notifications = () => {
                         onRefresh={fetchNotifications}
                         onPriceUpdate={handlePriceUpdate}
                         onReject={handleRejectNegotiation}
+                        showToast={setToast}
                       />
                     ))}
                   </div>
@@ -271,6 +275,7 @@ const Notifications = () => {
                         onRefresh={fetchNotifications}
                         onPriceUpdate={handlePriceUpdate}
                         onReject={handleRejectNegotiation}
+                        showToast={setToast}
                       />
                     ))}
                   </div>
@@ -286,10 +291,20 @@ const Notifications = () => {
                   onRefresh={fetchNotifications}
                   onPriceUpdate={handlePriceUpdate}
                   onReject={handleRejectNegotiation}
+                  showToast={setToast}
                 />
               ))
             )}
           </div>
+        )}
+        
+        {/* Toast Notification */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
         )}
       </div>
     </div>

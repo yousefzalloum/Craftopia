@@ -3,7 +3,7 @@
  * Handles all craftsman/artisan related API calls
  */
 
-import { post, get, put, patch, parseApiError } from '../utils/api';
+import { post, get, put, patch, del, parseApiError } from '../utils/api';
 
 /**
  * Register a new craftsman/artisan
@@ -455,6 +455,28 @@ export const getArtisanAvailability = async (artisanId) => {
 };
 
 /**
+ * Delete an availability record
+ * @param {string} availabilityId - Availability record ID
+ * @returns {Promise<Object>} Response from server
+ */
+export const deleteAvailability = async (availabilityId) => {
+  try {
+    console.log(`🗑️ Deleting availability with ID: ${availabilityId}`);
+    console.log(`📍 DELETE endpoint: /availability/${availabilityId}`);
+    const response = await del(`/availability/${availabilityId}`);
+    console.log('✅ Delete response:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Delete availability error details:', {
+      message: error.message,
+      status: error.status,
+      endpoint: `/availability/${availabilityId}`
+    });
+    throw new Error(parseApiError(error));
+  }
+};
+
+/**
  * Get all artisans (public endpoint)
  * @returns {Promise<Array>} Array of all artisans
  */
@@ -553,6 +575,7 @@ const craftsmanService = {
   getAllCraftsmen,
   setAvailability,
   getArtisanAvailability,
+  deleteAvailability,
   getAllArtisans,
   logoutCraftsman,
   changeArtisanPassword,
