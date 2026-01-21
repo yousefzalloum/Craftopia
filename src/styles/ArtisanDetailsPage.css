@@ -39,7 +39,7 @@
 
 /* Profile Header */
 .profile-header {
-  margin-bottom: 30px !important;
+  margin-top: 50px !important;
 }
 
 .profile-hero {
@@ -138,6 +138,7 @@
   grid-template-columns: repeat(3, 1fr) !important;
   gap: 20px !important;
   margin-top: 25px !important;
+  margin-bottom: 0 !important;
 }
 
 .stat {
@@ -178,7 +179,7 @@
   background: white !important;
   border-radius: 12px !important;
   padding: 35px !important;
-  margin-bottom: 25px !important;
+  margin-bottom: 40px !important;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
   animation: fadeInUp 0.6s ease;
   border: 1px solid #e0e0e0 !important;
@@ -387,6 +388,7 @@
   align-items: center !important;
   justify-content: center !important;
   z-index: 1000 !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   backdrop-filter: blur(4px) !important;
   animation: fadeIn 0.3s ease;
 }
