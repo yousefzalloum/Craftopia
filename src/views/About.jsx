@@ -1,4 +1,7 @@
 import '../styles/About.css';
+import yousefImg from '../assets/images/team/yousef.png';
+import omarImg from '../assets/images/team/omar (2).jpg';
+import hamzaImg from '../assets/images/team/hamza.png';
 
 const About = () => {
   return (
@@ -54,11 +57,6 @@ const About = () => {
               <p>We empower skilled artisans by providing a platform to showcase their work and reach customers who appreciate quality craftsmanship.</p>
             </div>
             <div className="mission-card">
-              <div className="mission-icon">🌍</div>
-              <h3>Sustainability</h3>
-              <p>Many of our crafts use reclaimed or recycled materials, promoting sustainable practices in industrial design.</p>
-            </div>
-            <div className="mission-card">
               <div className="mission-icon">💡</div>
               <h3>Innovation</h3>
               <p>We celebrate the fusion of traditional crafting techniques with modern industrial design aesthetics.</p>
@@ -89,25 +87,25 @@ const About = () => {
         </section>
 
         <section className="team-section">
-          <h2 className="section-title">Featured Artisans</h2>
+          <h2 className="section-title">Website Creators</h2>
           <div className="artisans-grid">
             <div className="artisan-card">
-              <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&q=80" alt="Ahmad Hassan" />
-              <h3>Ahmad Hassan</h3>
-              <p className="artisan-specialty">⚒️ Metalwork Specialist</p>
-              <p>15+ years of experience in industrial metalwork and design</p>
+              <img src={omarImg} alt="Omar Hamouri" />
+              <h3>Omar Hamouri</h3>
+              <p className="artisan-specialty">💻 Co-Developer</p>
+              <p>Full-stack developer passionate about creating seamless user experiences</p>
             </div>
             <div className="artisan-card">
-              <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=300&fit=crop&q=80" alt="Sarah Mitchell" />
-              <h3>Sarah Mitchell</h3>
-              <p className="artisan-specialty">🪵 Woodwork Master</p>
-              <p>Specializes in reclaimed wood furniture and industrial design</p>
+              <img src={yousefImg} alt="Yousef Zalloum" />
+              <h3>Yousef Zalloum</h3>
+              <p className="artisan-specialty">🚀 Lead Developer</p>
+              <p>Project lead and full-stack developer bringing Craftopia to life</p>
             </div>
             <div className="artisan-card">
-              <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop&q=80" alt="Michael Chen" />
-              <h3>Michael Chen</h3>
-              <p className="artisan-specialty">🎨 Mixed Media Artist</p>
-              <p>Creates unique pieces combining metal, wood, and found objects</p>
+              <img src={hamzaImg} alt="Hamza Al Jabari" />
+              <h3>Hamza Al Jabari</h3>
+              <p className="artisan-specialty">⚡ Co-Developer</p>
+              <p>Full-stack developer focused on building robust and scalable solutions</p>
             </div>
           </div>
         </section>

@@ -314,9 +314,6 @@ const AdminDashboard = () => {
             <div className="stat-details">
               <h3>Reservations</h3>
               <p className="stat-number">{stats.totalReservations}</p>
-              <div className="stat-breakdown">
-                <span>{stats.completedJobs} Completed</span>
-              </div>
             </div>
           </div>
 
@@ -471,7 +468,6 @@ const AdminDashboard = () => {
               <tr>
                 <th>Customer</th>
                 <th>Artisan</th>
-                <th>Craft Type</th>
                 <th>Rating</th>
                 <th>Comment</th>
                 <th>Date</th>
@@ -481,7 +477,7 @@ const AdminDashboard = () => {
             <tbody>
               {reviews.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="no-reviews">
+                  <td colSpan="6" className="no-reviews">
                     No reviews found
                   </td>
                 </tr>
@@ -513,7 +509,6 @@ const AdminDashboard = () => {
                       <td>
                         <strong>{artisan.name || artisan._id || 'Unknown Artisan'}</strong>
                       </td>
-                      <td>{artisan.craftType || 'N/A'}</td>
                       <td className="review-stars">
                         {renderStars(review.stars_number || review.rating || 0)}
                         <span className="star-count">({review.stars_number || review.rating || 0})</span>

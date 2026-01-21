@@ -46,33 +46,85 @@ export const loginAdmin = async (credentials) => {
  */
 export const getStats = async () => {
   try {
-    console.log('📊 Fetching admin statistics...');
+    console.log('📊 Fetching admin statistics from /api/admin/stats...');
     const response = await get('/admin/stats');
-    console.log('✅ Stats fetched successfully:', response);
-    console.log('📊 Stats structure:', JSON.stringify(response, null, 2));
+    console.log('✅ Raw API Response:', response);
     
-    // If the response is nested (e.g., { stats: { ... } }), extract it
-    const stats = response.stats || response;
+    // Handle different possible response structures:
+    // 1. { data: { stats: {...} } }
+    // 2. { stats: {...} }
+    // 3. { customers: X, artisans: Y, ... } (flat structure)
+    let stats;
+    if (response.data && response.data.stats) {
+      stats = response.data.stats;
+    } else if (response.stats) {
+      stats = response.stats;
+    } else if (response.data) {
+      stats = response.data;
+    } else {
+      stats = response;
+    }
     
-    // Map backend field names to frontend expected names
-    const customers = stats.customers || 0;
-    const artisans = stats.artisans || 0;
-    const totalUsers = customers + artisans;
+    console.log('📊 Extracted stats object:', stats);
+    console.log('📊 Available fields:', Object.keys(stats));
+    console.table(stats);
     
-    // Backend uses 'reviews' and 'reservations' instead of 'totalReviews' and 'totalReservations'
+    // Log each field individually to make it very clear
+    console.log('=== FIELD BY FIELD ===');
+    Object.entries(stats).forEach(([key, value]) => {
+      console.log(`  ${key}: ${value}`);
+    });
+    
+    // Extract counts with multiple fallback options
+    const customers = stats.customers || stats.customersCount || stats.totalCustomers || 0;
+    const artisans = stats.artisans || stats.artisansCount || stats.totalArtisans || 0;
+    const totalUsers = stats.totalUsers || (customers + artisans);
+    
+    // Backend uses "orders" for reservations/bookings
+    const totalReservations = stats.orders || 
+                              stats.totalOrders ||
+                              stats.reservations || 
+                              stats.totalReservations || 
+                              stats.bookings ||
+                              0;
+    
+    const totalReviews = stats.reviews || 
+                        stats.totalReviews || 
+                        stats.reviewsCount ||
+                        0;
+    
+    const completedJobs = stats.completedJobs || 
+                         stats.completed || 
+                         stats.completedOrders ||
+                         0;
+    
+    const totalRevenue = stats.totalRevenue || 
+                        stats.revenue || 
+                        0;
+    
+    console.log('✅ Mapped stats:', {
+      totalUsers,
+      customers,
+      artisans,
+      totalReservations,
+      totalReviews,
+      completedJobs,
+      totalRevenue
+    });
+    
     return {
       totalUsers,
       customers,
       artisans,
-      totalReservations: stats.reservations || stats.totalReservations || 0,
-      totalReviews: stats.reviews || stats.totalReviews || 0,
-      completedJobs: stats.completedJobs || stats.completed || 0,
-      totalRevenue: stats.totalRevenue || stats.revenue || 0
+      totalReservations,
+      totalReviews,
+      completedJobs,
+      totalRevenue
     };
   } catch (error) {
-    console.error('❌ Failed to fetch stats:', error.message);
+    console.error('❌ Failed to fetch stats:', error);
     // Return default stats if endpoint doesn't exist
-    if (error.message.includes('404')) {
+    if (error.message?.includes('404')) {
       console.warn('⚠️ Admin stats endpoint not available, returning default values');
       return {
         totalUsers: 0,
@@ -225,22 +277,23 @@ export const deleteReview = async (reviewId) => {
 };
 
 /**
- * Delete a portfolio image
+ * Delete a portfolio image/project
  * @param {string} artisanId - Artisan ID
- * @param {string} imageUrl - Image URL to delete
+ * @param {string} projectId - Project ID to delete
  * @returns {Promise<Object>} Delete confirmation
  */
-export const deletePortfolioImage = async (artisanId, imageUrl) => {
+export const deletePortfolioImage = async (artisanId, projectId) => {
   try {
-    console.log('🗑️ Deleting portfolio image for artisan:', artisanId);
-    const response = await del('/admin/portfolio', {
+    console.log('🗑️ Deleting portfolio project for artisan:', artisanId);
+    console.log('🗑️ Project ID:', projectId);
+    const response = await del('/admin/project', {
       artisanId,
-      imageUrl
+      projectId
     });
-    console.log('✅ Portfolio image deleted successfully:', response);
+    console.log('✅ Portfolio project deleted successfully:', response);
     return response;
   } catch (error) {
-    console.error('❌ Failed to delete portfolio image:', error.message);
+    console.error('❌ Failed to delete portfolio project:', error.message);
     throw new Error(parseApiError(error));
   }
 };

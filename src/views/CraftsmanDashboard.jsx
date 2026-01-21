@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getArtisanProfile, setAvailability } from '../services/craftsmanService';
+import { getArtisanProfile, setAvailability, getArtisanAvailability, deleteAvailability } from '../services/craftsmanService';
 import { apiRequest } from '../utils/api';
 import { CraftsmanController } from '../controllers/CraftsmanController';
 import { ReservationController } from '../controllers/ReservationController';
 import { CraftController } from '../controllers/CraftController';
 import ReservationCard from '../components/ReservationCard';
 import Loading from '../components/Loading';
+import Toast from '../components/Toast';
 import '../styles/CraftsmanDashboard.css';
 
 const CraftsmanDashboard = () => {
@@ -34,6 +35,12 @@ const CraftsmanDashboard = () => {
   });
   const [isSavingAvailability, setIsSavingAvailability] = useState(false);
   const [availabilityMessage, setAvailabilityMessage] = useState(null);
+  const [currentAvailability, setCurrentAvailability] = useState([]);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [deletingAvailabilityId, setDeletingAvailabilityId] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [availabilityToDelete, setAvailabilityToDelete] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in as artisan
@@ -51,6 +58,10 @@ const CraftsmanDashboard = () => {
       if (profile) {
         console.log('📦 Using cached profile from AuthContext');
         setCraftsman(profile);
+        // Fetch availability for cached profile
+        if (profile?._id) {
+          fetchAvailability(profile._id);
+        }
         return;
       }
       
@@ -65,6 +76,11 @@ const CraftsmanDashboard = () => {
         
         // Set local state
         setCraftsman(apiProfile);
+        
+        // Fetch availability once we have the artisan ID
+        if (apiProfile?._id) {
+          fetchAvailability(apiProfile._id);
+        }
       } catch (error) {
         console.error('⚠️ Failed to fetch profile from API:', error.message);
         // Fallback to demo data if available
@@ -72,6 +88,10 @@ const CraftsmanDashboard = () => {
         if (demoData) {
           console.log('Using fallback demo data');
           setCraftsman(demoData);
+          // Try to fetch availability even with demo data
+          if (demoData?._id || demoData?.id) {
+            fetchAvailability(demoData._id || demoData.id);
+          }
         }
       } finally {
         setIsLoadingProfile(false);
@@ -120,6 +140,65 @@ const CraftsmanDashboard = () => {
     } finally {
       setIsLoadingJobs(false);
     }
+  };
+
+  const fetchAvailability = async (artisanId) => {
+    if (!artisanId) {
+      console.log('⚠️ No artisan ID provided, skipping availability fetch');
+      return;
+    }
+    
+    try {
+      setIsLoadingAvailability(true);
+      console.log('📅 Fetching artisan availability for ID:', artisanId);
+      const data = await getArtisanAvailability(artisanId);
+      console.log('✅ Availability data:', data);
+      setCurrentAvailability(data || []);
+    } catch (err) {
+      console.error('❌ Error fetching availability:', err);
+      setCurrentAvailability([]);
+    } finally {
+      setIsLoadingAvailability(false);
+    }
+  };
+
+  const handleDeleteAvailability = async (availabilityId) => {
+    setAvailabilityToDelete(availabilityId);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteAvailability = async () => {
+    if (!availabilityToDelete) return;
+
+    try {
+      setDeletingAvailabilityId(availabilityToDelete);
+      console.log('🗑️ Deleting availability:', availabilityToDelete);
+      
+      await deleteAvailability(availabilityToDelete);
+      
+      console.log('✅ Availability deleted successfully');
+      setToast({ message: 'Time slot deleted successfully!', type: 'success' });
+      
+      setDeleteModalOpen(false);
+      setAvailabilityToDelete(null);
+      
+      // Refresh availability list
+      if (craftsman?._id) {
+        await fetchAvailability(craftsman._id);
+      }
+    } catch (err) {
+      console.error('❌ Error deleting availability:', err);
+      setToast({ message: err.message || 'Failed to delete time slot', type: 'error' });
+      setDeleteModalOpen(false);
+      setAvailabilityToDelete(null);
+    } finally {
+      setDeletingAvailabilityId(null);
+    }
+  };
+
+  const cancelDeleteAvailability = () => {
+    setDeleteModalOpen(false);
+    setAvailabilityToDelete(null);
   };
 
   const formatDate = (dateString) => {
@@ -208,6 +287,11 @@ const CraftsmanDashboard = () => {
         type: 'success',
         text: 'Availability set successfully!'
       });
+      
+      // Refresh availability list
+      if (craftsman?._id) {
+        await fetchAvailability(craftsman._id);
+      }
       
       // Reset form to default values
       setAvailabilityForm({
@@ -372,6 +456,66 @@ const CraftsmanDashboard = () => {
           </div>
         )}
 
+        {/* Current Availability Display */}
+        <div className="availability-display-section">
+          <div className="section-header">
+            <h2>🕒 Your Availability Schedule</h2>
+            <p className="section-description">Your working hours for the week</p>
+          </div>
+
+          {isLoadingAvailability ? (
+            <div className="availability-loading">
+              <Loading />
+            </div>
+          ) : currentAvailability.length === 0 ? (
+            <div className="no-availability">
+              <div className="no-availability-icon">📅</div>
+              <h3>No availability set</h3>
+              <p>Click "Manage Time" above to set your working hours</p>
+            </div>
+          ) : (
+            <div className="availability-grid">
+              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                const daySchedule = currentAvailability.filter(slot => slot.day === day);
+                return (
+                  <div key={day} className={`availability-day-card ${daySchedule.length > 0 ? 'has-schedule' : 'no-schedule'}`}>
+                    <div className="day-header">
+                      <span className="day-name">{day}</span>
+                      {daySchedule.length > 0 && (
+                        <span className="schedule-badge">✓</span>
+                      )}
+                    </div>
+                    <div className="day-schedule">
+                      {daySchedule.length === 0 ? (
+                        <span className="no-hours">Not available</span>
+                      ) : (
+                        daySchedule.map((slot, idx) => (
+                          <div key={idx} className="time-slot">
+                            <div className="time-slot-content">
+                              <span className="time-icon">⏰</span>
+                              <span className="time-range">
+                                {slot.start_time} - {slot.end_time}
+                              </span>
+                            </div>
+                            <button
+                              className="delete-slot-btn"
+                              onClick={() => handleDeleteAvailability(slot._id)}
+                              disabled={deletingAvailabilityId === slot._id}
+                              title="Delete this time slot"
+                            >
+                              {deletingAvailabilityId === slot._id ? '⏳' : '🗑️'}
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Bookings Section */}
         <div className="bookings-section">
           <div className="section-header">
@@ -487,6 +631,127 @@ const CraftsmanDashboard = () => {
           })()}
         </div>
       </div>
+
+      {/* Delete Availability Confirmation Modal */}
+      {deleteModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          backdropFilter: 'blur(4px)',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+            borderRadius: '20px',
+            padding: '2.5rem',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            transform: 'scale(1)',
+            animation: 'slideUp 0.3s ease-out',
+            border: '1px solid rgba(255,255,255,0.5)'
+          }}>
+            {/* Icon */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              boxShadow: '0 10px 30px rgba(231, 76, 60, 0.3)'
+            }}>
+              <span style={{ fontSize: '2.5rem' }}>🗑️</span>
+            </div>
+
+            {/* Title */}
+            <h2 style={{
+              margin: '0 0 1rem 0',
+              color: '#2c3e50',
+              fontSize: '1.8rem',
+              fontWeight: 'bold',
+              textAlign: 'center'
+            }}>
+              Delete Time Slot?
+            </h2>
+
+            {/* Message */}
+            <p style={{
+              color: '#7f8c8d',
+              fontSize: '1.05rem',
+              lineHeight: '1.6',
+              textAlign: 'center',
+              margin: '0 0 2rem 0'
+            }}>
+              Are you sure you want to delete this time slot? This action cannot be undone.
+            </p>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={cancelDeleteAvailability}
+                style={{
+                  flex: 1,
+                  padding: '1rem',
+                  background: '#ecf0f1',
+                  color: '#2c3e50',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '1.05rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+                onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+                onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+              >
+                ✗ Cancel
+              </button>
+              <button
+                onClick={confirmDeleteAvailability}
+                disabled={deletingAvailabilityId !== null}
+                style={{
+                  flex: 1,
+                  padding: '1rem',
+                  background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '1.05rem',
+                  fontWeight: 'bold',
+                  cursor: deletingAvailabilityId !== null ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 15px rgba(231, 76, 60, 0.4)',
+                  opacity: deletingAvailabilityId !== null ? 0.6 : 1
+                }}
+                onMouseOver={(e) => {
+                  if (deletingAvailabilityId === null) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 6px 20px rgba(231, 76, 60, 0.5)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 15px rgba(231, 76, 60, 0.4)';
+                }}
+              >
+                {deletingAvailabilityId !== null ? '⏳ Deleting...' : '🗑️ Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modern Completion Confirmation Modal */}
       {completeModalOpen && (
@@ -629,6 +894,15 @@ const CraftsmanDashboard = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

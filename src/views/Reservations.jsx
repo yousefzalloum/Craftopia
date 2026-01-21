@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getCustomerReservations, cancelReservation } from '../services/customerService';
 import { post, put } from '../utils/api';
 import Loading from '../components/Loading';
+import Toast from '../components/Toast';
 import '../styles/Reservations.css';
 
 const Reservations = () => {
@@ -28,6 +29,7 @@ const Reservations = () => {
   const [replyModalOpen, setReplyModalOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [replyType, setReplyType] = useState('accept');
+  const [toast, setToast] = useState(null);
   const [negotiationNote, setNegotiationNote] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
   
@@ -188,7 +190,10 @@ const Reservations = () => {
 
       await put(`/orders/${selectedReservation._id}/reply`, replyData);
 
-      alert(`Price ${replyType === 'accept' ? 'accepted' : replyType === 'reject' ? 'rejected' : 'negotiation sent'} successfully!`);
+      setToast({ 
+        message: `Price ${replyType === 'accept' ? 'accepted' : replyType === 'reject' ? 'rejected' : 'negotiation sent'} successfully!`, 
+        type: 'success' 
+      });
       
       handleCloseReplyModal();
       
@@ -197,7 +202,7 @@ const Reservations = () => {
       setReservations(data || []);
     } catch (err) {
       console.error('Failed to submit reply:', err);
-      alert(err.message || 'Failed to submit reply');
+      setToast({ message: err.message || 'Failed to submit reply', type: 'error' });
     } finally {
       setSubmittingReply(false);
     }
@@ -220,14 +225,14 @@ const Reservations = () => {
       await put(`/orders/${orderId}/customer-response`, payload);
 
       const actionText = action === 'accept' ? 'accepted' : action === 'reject' ? 'declined' : 'sent';
-      alert(`Price offer ${actionText} successfully!`);
+      setToast({ message: `Price offer ${actionText} successfully!`, type: 'success' });
       
       // Refresh reservations
       const data = await getCustomerReservations();
       setReservations(data || []);
     } catch (err) {
       console.error('Failed to submit customer response:', err);
-      alert(err.message || 'Failed to submit response');
+      setToast({ message: err.message || 'Failed to submit response', type: 'error' });
     }
   };
 
@@ -1502,6 +1507,15 @@ const Reservations = () => {
             </svg>
             <span style={{fontSize: '1.05rem', fontWeight: '600'}}>{successMessage}</span>
           </div>
+        )}
+        
+        {/* Toast Notification */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
         )}
       </div>
     </div>

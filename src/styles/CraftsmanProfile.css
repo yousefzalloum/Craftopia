@@ -1,7 +1,7 @@
 /* Artisan Profile - Modern Professional Design */
 .artisan-profile-modern {
   min-height: 100vh;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #3d5a80 100%);
+  background: linear-gradient(135deg, #dce6f2 0%, #e8f0f7 50%, #f0e8dc 100%);
   padding: 120px 0 0;
   position: relative;
   overflow: hidden;
@@ -16,7 +16,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background: radial-gradient(circle, rgba(30, 58, 95, 0.04) 1px, transparent 1px);
   background-size: 50px 50px;
   animation: backgroundMove 20s linear infinite;
   pointer-events: none;
@@ -123,6 +123,218 @@
 .artisan-profile-section {
   padding: 40px;
   border-bottom: 1px solid #f0f0f0;
+  margin-top: 2rem;
+}
+
+/* Profile Hero Enhanced */
+.profile-hero-enhanced {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+}
+
+.hero-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px 16px 0 0;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-image-container-enhanced {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.profile-image-enhanced {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 6px solid white;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  object-fit: cover;
+}
+
+.profile-info-enhanced {
+  text-align: center;
+}
+
+.profile-name-enhanced {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin-bottom: 10px;
+}
+
+.profession-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: #e67e22;
+  color: white;
+  border-radius: 50px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.location-enhanced {
+  font-size: 16px;
+  color: #7f8c8d;
+  margin-bottom: 20px;
+}
+
+.profile-stats-enhanced {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.stat-card {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+}
+
+.stat-icon-enhanced {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin-bottom: 5px;
+}
+
+.stat-value-small {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e3a5f;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.availability-badge-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: #27ae60;
+  color: white;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.image-ring {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border: 3px dashed #e67e22;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.profile-title-section {
+  margin-bottom: 15px;
+}
+
+.badge-icon {
+  font-size: 18px;
+}
+
+.location-icon {
+  margin-right: 5px;
+}
+
+/* Enhanced Profile Sections */
+.profile-section-enhanced {
+  background: white;
+  border-radius: 16px;
+  padding: 35px;
+  margin-top: 2rem;
+  margin-bottom: 25px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+}
+
+.section-header-enhanced {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 3px solid #e67e22;
+}
+
+.section-icon {
+  font-size: 28px;
+}
+
+.section-header-enhanced h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin: 0;
+}
+
+.about-content {
+  padding: 10px 0;
+}
+
+.bio-enhanced {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #2c3e50;
+}
+
+.portfolio-grid-enhanced {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
 }
 
 .artisan-avatar-wrapper {
