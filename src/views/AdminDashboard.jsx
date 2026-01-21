@@ -314,9 +314,6 @@ const AdminDashboard = () => {
             <div className="stat-details">
               <h3>Reservations</h3>
               <p className="stat-number">{stats.totalReservations}</p>
-              <div className="stat-breakdown">
-                <span>{stats.completedJobs} Completed</span>
-              </div>
             </div>
           </div>
 
